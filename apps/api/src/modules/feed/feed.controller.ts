@@ -22,4 +22,16 @@ export class FeedController {
     const result = await this.feedService.getReplies(request.params.postId, request.query.cursor);
     return reply.send(result);
   };
+
+  getDiscoveryFeed = async (request: FastifyRequest, reply: FastifyReply) => {
+    const q = request.query as any;
+    const result = await this.feedService.getDiscoveryFeed(request.user?.userId, q.cursor ? parseInt(q.cursor) : 0);
+    return reply.send(result);
+  };
+
+  getTrendingAppsFeed = async (request: FastifyRequest, reply: FastifyReply) => {
+    const q = request.query as any;
+    const result = await this.feedService.getTrendingAppsFeed(q.cursor ? parseInt(q.cursor) : 0);
+    return reply.send(result);
+  };
 }

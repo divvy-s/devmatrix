@@ -1,8 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError, ForbiddenError } from '@workspace/errors';
-import { db, sessions } from '@workspace/db';
+import { db, sessions, users } from '@workspace/db';
 import { eq, and, isNull, gt } from 'drizzle-orm';
+import { redisConnection } from '@workspace/queue';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
@@ -32,6 +33,22 @@ export async function authenticateRequest(request: FastifyRequest, reply: Fastif
 
     if (!session) {
       throw new UnauthorizedError('SESSION_REVOKED');
+    }
+
+    const cacheKey = `user_status:${payload.sub}`;
+    let status = await redisConnection.get(cacheKey);
+
+    if (!status) {
+      const uArr = await db.select({ status: users.status }).from(users).where(eq(users.id, payload.sub)).limit(1);
+      status = uArr[0]?.status || 'deleted';
+      await redisConnection.setex(cacheKey, 60, status);
+    }
+
+    if (status === 'suspended') {
+      throw new ForbiddenError('Account suspended');
+    }
+    if (status === 'deleted') {
+      throw new UnauthorizedError('Account deleted');
     }
 
     request.user = {

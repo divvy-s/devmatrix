@@ -18,4 +18,15 @@ export class DevelopersController {
     const result = await this.service.updateMe(request.user!.userId, request.body as any);
     return reply.send(result);
   };
+
+  getAppAnalytics = async (request: FastifyRequest<{ Params: { appId: string } }>, reply: FastifyReply) => {
+     const q = request.query as any;
+     const result = await this.service.getAppAnalytics(request.user!.userId, request.params.appId, q.period, q.from, q.to);
+     return reply.send(result);
+  };
+
+  getAppAnalyticsRealtime = async (request: FastifyRequest<{ Params: { appId: string } }>, reply: FastifyReply) => {
+     const result = await this.service.getAppAnalyticsRealtime(request.user!.userId, request.params.appId);
+     return reply.send(result);
+  };
 }

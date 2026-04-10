@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { DevelopersController } from './developers.controller';
 import { WebhooksController } from '../webhooks/webhooks.controller';
-import { authenticateRequest } from '../../middleware/auth.middleware';
+import { authenticateRequest, requireRole } from '../../middleware/auth.middleware';
 
 export async function developersRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
@@ -32,4 +32,7 @@ export async function developersRoutes(app: FastifyInstance) {
       })
     }
   }, controller.updateMe as any);
+
+  app.get('/me/apps/:appId/analytics', { preHandler: [authenticateRequest, requireRole('developer')] }, controller.getAppAnalytics as any);
+  app.get('/me/apps/:appId/analytics/realtime', { preHandler: [authenticateRequest, requireRole('developer')] }, controller.getAppAnalyticsRealtime as any);
 }

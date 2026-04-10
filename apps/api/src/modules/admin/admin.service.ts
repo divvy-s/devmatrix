@@ -1,4 +1,5 @@
-import { db, apps, appVersions, webhookSubscriptions, appTokens, developers } from '@workspace/db';
+import { db, apps, appVersions, webhookSubscriptions, appTokens, developers, featureFlags } from '@workspace/db';
+import { redisConnection } from '@workspace/queue';
 import { eq, desc } from 'drizzle-orm';
 import { NotFoundError, BusinessError } from '@workspace/errors';
 import crypto from 'crypto';
@@ -56,5 +57,39 @@ export class AdminAppsService {
        
        return updated[0];
      });
+  }
+
+  async listFeatureFlags() {
+     return await db.select().from(featureFlags).orderBy(featureFlags.createdAt);
+  }
+
+  async createFeatureFlag(name: string, data: any) {
+     const existing = await db.select().from(featureFlags).where(eq(featureFlags.name, name)).limit(1);
+     if (existing[0]) throw new BusinessError('Flag exists', 'DUPLICATE_FLAG');
+
+     const fArr = await db.insert(featureFlags).values({
+        name,
+        description: data.description,
+        enabled: data.enabled || false,
+        enabledForRoles: data.enabledForRoles || [],
+        enabledPercentage: data.enabledPercentage || 0
+     }).returning();
+     
+     await redisConnection.del(`fflag:${name}`);
+     return fArr[0];
+  }
+
+  async updateFeatureFlag(name: string, data: any) {
+     const fArr = await db.update(featureFlags).set({
+         description: data.description,
+         enabled: data.enabled,
+         enabledForRoles: data.enabledForRoles,
+         enabledPercentage: data.enabledPercentage,
+         updatedAt: new Date()
+     }).where(eq(featureFlags.name, name)).returning();
+     
+     if (!fArr[0]) throw new NotFoundError('Flag', name);
+     await redisConnection.del(`fflag:${name}`);
+     return fArr[0];
   }
 }

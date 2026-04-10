@@ -50,4 +50,7 @@ export async function feedRoutes(app: FastifyInstance) {
     },
     controller.getReplies as any
   );
+
+  app.get('/discovery', controller.getDiscoveryFeed as any);
+  app.get('/trending/apps', controller.getTrendingAppsFeed as any);
 }
