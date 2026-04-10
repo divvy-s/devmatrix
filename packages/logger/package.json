@@ -1,0 +1,14 @@
+{
+  "name": "@workspace/logger",
+  "version": "1.0.0",
+  "description": "Shared Pino logger",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "pino": "^8.20.0"
+  },
+  "devDependencies": {
+    "pino-pretty": "^11.0.0"
+  }
+}

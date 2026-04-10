@@ -1,0 +1,12 @@
+{
+  "name": "@workspace/queue",
+  "version": "1.0.0",
+  "description": "BullMQ and Redis setup",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "bullmq": "^5.7.8",
+    "ioredis": "^5.3.2"
+  }
+}

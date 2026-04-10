@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "baseUrl": ".",
+    "paths": {
+      "@workspace/types": ["packages/types/src/index"],
+      "@workspace/errors": ["packages/errors/src/index"],
+      "@workspace/logger": ["packages/logger/src/index"],
+      "@workspace/db": ["packages/db/src/index"],
+      "@workspace/queue": ["packages/queue/src/index"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

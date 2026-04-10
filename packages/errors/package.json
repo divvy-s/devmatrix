@@ -1,0 +1,8 @@
+{
+  "name": "@workspace/errors",
+  "version": "1.0.0",
+  "description": "Shared application error classes",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}
