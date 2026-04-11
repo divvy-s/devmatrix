@@ -17,7 +17,7 @@ vi.mock('@workspace/queue', () => ({
 describe('App E2E Integration setup', () => {
   it('should boot and return 200 on /health', async () => {
     const app = await buildApp();
-    
+
     try {
       const response = await app.inject({
         method: 'GET',
