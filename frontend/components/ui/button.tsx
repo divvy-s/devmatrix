@@ -51,7 +51,7 @@ function Button({
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      nativeButton={nativeButton !== undefined ? nativeButton : !props.render}
+      nativeButton={nativeButton ?? (props.render == null)}
       {...props}
     />
   )

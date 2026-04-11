@@ -5,52 +5,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Heart, Repeat2, Share, BadgeCheck, Zap } from "lucide-react";
-
-// Mock Data
-const MOCK_POSTS = [
-  {
-    id: "p1",
-    author: { name: "alice", handle: "alice.eth", avatar: "", isVerified: true },
-    time: "2h",
-    text: "Just built a new mini-app for tipping creators directly in your feed! Try it out below. 👇",
-    miniApp: {
-      type: "widget",
-      id: "app_coffee",
-      title: "Buy Creator a Coffee",
-      icon: "☕",
-      color: "text-primary bg-primary/10",
-      action: "Connect to Tip"
-    },
-    stats: { likes: 142, replies: 12, reposts: 24 }
-  },
-  {
-    id: "p2",
-    author: { name: "bob_builder", handle: "bob.lens", avatar: "", isVerified: false },
-    time: "5h",
-    text: "Can't wait to see what people build on the new CastKit protocol. The sandboxing architecture is insane.",
-    miniApp: null,
-    stats: { likes: 58, replies: 2, reposts: 5 }
-  },
-  {
-    id: "p3",
-    author: { name: "art_gallery", handle: "gallery.eth", avatar: "", isVerified: true },
-    time: "12h",
-    text: "Dropping our new genesis collection today. Minting is live explicitly through our CastKit widget.",
-    miniApp: {
-      type: "widget",
-      id: "app_mint",
-      title: "Genesis NFT Mint",
-      icon: "🎨",
-      color: "text-secondary bg-secondary/10",
-      action: "Mint for 0.05 ETH"
-    },
-    stats: { likes: 301, replies: 45, reposts: 89 }
-  }
-];
+import { MessageSquare, Heart, Repeat2, Share, BadgeCheck, Zap, AlertCircle } from "lucide-react";
+import { useFeed, useLikePost, useRepost, useCreatePost } from "@/hooks/use-feed";
 
 export default function FeedPage() {
   const [activeTab, setActiveTab] = useState("following");
+  const [composeText, setComposeText] = useState("");
+
+  const followingFeed = useFeed("following");
+  const discoverFeed = useFeed("discovery");
+  const trendingFeed = useFeed("trending");
+
+  const getActiveFeed = () => {
+    if (activeTab === "discover") return discoverFeed;
+    if (activeTab === "trending") return trendingFeed;
+    return followingFeed;
+  };
+
+  const feed = getActiveFeed();
+  const posts = feed.data?.pages.flatMap((p) => p.data) ?? [];
+
+  const { mutate: likePost } = useLikePost();
+  const { mutate: repostPost } = useRepost();
+  const { mutate: createPost, isPending: isCreatingPost } = useCreatePost();
+
+  const handlePost = () => {
+    if (!composeText || composeText.trim().length === 0 || composeText.length > 500 || isCreatingPost) return;
+    createPost(composeText, {
+      onSuccess: () => setComposeText(""),
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -58,7 +42,7 @@ export default function FeedPage() {
         
         {/* MAIN FEED */}
         <div className="flex-1 max-w-2xl min-w-0">
-          <Tabs defaultValue="following" className="w-full mb-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
             <TabsList className="w-full justify-start border-b border-border/40 rounded-none bg-transparent p-0 h-auto gap-6">
               <TabsTrigger value="following" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 py-3 font-display font-medium text-lg tracking-wide bg-transparent">
                 Following
@@ -71,7 +55,7 @@ export default function FeedPage() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="following" className="mt-0">
+            <TabsContent value={activeTab} className="mt-0">
               {/* Compose Box */}
               <div className="p-4 border-b border-border/40 flex gap-4 h-32">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex flex-shrink-0 items-center justify-center font-bold text-primary">
@@ -81,6 +65,8 @@ export default function FeedPage() {
                   <textarea 
                     placeholder="What's happening? /app to attach mini-app" 
                     className="w-full bg-transparent border-none outline-none resize-none h-16 text-lg placeholder:text-muted-foreground/70"
+                    value={composeText}
+                    onChange={(e) => setComposeText(e.target.value)}
                   />
                   <div className="flex justify-between items-center border-t border-border/30 pt-3">
                     <div className="flex gap-2">
@@ -88,91 +74,127 @@ export default function FeedPage() {
                          <Zap className="w-4 h-4" />
                        </Button>
                     </div>
-                    <Button size="sm" className="bg-primary text-primary-foreground font-mono rounded-full px-5 h-8">Post</Button>
+                    <Button 
+                      size="sm" 
+                      className="bg-primary text-primary-foreground font-mono rounded-full px-5 h-8 disabled:opacity-50"
+                      onClick={handlePost}
+                      disabled={isCreatingPost || composeText.trim().length === 0 || composeText.length > 500}
+                    >
+                      {isCreatingPost ? "Posting..." : "Post"}
+                    </Button>
                   </div>
                 </div>
               </div>
 
               {/* Feed Posts */}
               <div className="flex flex-col">
-                {MOCK_POSTS.map(post => (
-                  <div key={post.id} className="p-5 border-b border-border/40 hover:bg-card/20 transition-colors">
-                    <div className="flex gap-4">
-                      {/* Avatar Side */}
-                      <div className="w-10 h-10 rounded-full bg-secondary/20 flex-shrink-0 flex items-center justify-center font-bold text-secondary">
-                        {post.author.name.substring(0,2).toUpperCase()}
-                      </div>
-                      
-                      {/* Content Side */}
-                      <div className="flex-1 min-w-0">
-                        {/* Header */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold font-display">{post.author.name}</span>
-                          {post.author.isVerified && <BadgeCheck className="w-4 h-4 text-primary fill-primary/20" />}
-                          <span className="text-muted-foreground font-mono text-xs">@{post.author.handle}</span>
-                          <span className="text-muted-foreground text-xs">·</span>
-                          <span className="text-muted-foreground text-xs hover:underline cursor-pointer">{post.time}</span>
-                        </div>
-                        
-                        {/* Text */}
-                        <p className="text-foreground/90 whitespace-pre-wrap mb-4 leading-normal">
-                          {post.text}
-                        </p>
-
-                        {/* Mini-App Inline Renderer */}
-                        {post.miniApp && (
-                          <div className="mb-4 rounded-xl border border-border/50 bg-[#0c0c0c] overflow-hidden">
-                            <div className="bg-[#1a1a1a] px-3 py-2 border-b border-border/40 flex items-center gap-2">
-                              <Zap className="w-3.5 h-3.5 text-primary" />
-                              <span className="text-xs font-mono text-muted-foreground">Interactive App</span>
-                            </div>
-                            <div className="p-6">
-                              <Card className="border-border/50 bg-background inset-shadow-sm p-5 text-center">
-                                <div className={`w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center text-xl ${post.miniApp.color}`}>
-                                  {post.miniApp.icon}
-                                </div>
-                                <h4 className="font-display font-bold text-lg mb-4">{post.miniApp.title}</h4>
-                                <Button className="w-full bg-white text-black hover:bg-white/90 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                                  {post.miniApp.action}
-                                </Button>
-                              </Card>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Action Bar */}
-                        <div className="flex items-center justify-between text-muted-foreground max-w-md w-full">
-                          <button className="flex items-center gap-2 hover:text-primary transition-colors group">
-                            <div className="p-2 rounded-full group-hover:bg-primary/10">
-                              <MessageSquare className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs font-mono">{post.stats.replies}</span>
-                          </button>
-                          
-                          <button className="flex items-center gap-2 hover:text-green-500 transition-colors group">
-                            <div className="p-2 rounded-full group-hover:bg-green-500/10">
-                              <Repeat2 className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs font-mono">{post.stats.reposts}</span>
-                          </button>
-                          
-                          <button className="flex items-center gap-2 hover:text-red-500 transition-colors group">
-                            <div className="p-2 rounded-full group-hover:bg-red-500/10">
-                              <Heart className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs font-mono">{post.stats.likes}</span>
-                          </button>
-                          
-                          <button className="flex items-center gap-2 hover:text-primary transition-colors group">
-                            <div className="p-2 rounded-full group-hover:bg-primary/10">
-                              <Share className="w-4 h-4" />
-                            </div>
-                          </button>
+                {feed.isPending ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="p-5 border-b border-border/40 flex gap-4 animate-pulse">
+                      <div className="w-10 h-10 rounded-full bg-secondary/20 flex-shrink-0" />
+                      <div className="flex-1 space-y-4 py-1">
+                        <div className="h-4 bg-secondary/20 rounded w-1/4" />
+                        <div className="space-y-2">
+                          <div className="h-4 bg-secondary/20 rounded" />
+                          <div className="h-4 bg-secondary/20 rounded w-5/6" />
                         </div>
                       </div>
                     </div>
+                  ))
+                ) : feed.isError ? (
+                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center">
+                    <AlertCircle className="w-8 h-8 text-destructive mb-2" />
+                    <p className="mb-4">Failed to load feed.</p>
+                    <Button variant="outline" onClick={() => feed.refetch()}>Try again</Button>
                   </div>
-                ))}
+                ) : posts.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    Nothing here yet.
+                  </div>
+                ) : (
+                  <>
+                    {posts.map(post => (
+                      <div key={post.id} className="p-5 border-b border-border/40 hover:bg-card/20 transition-colors">
+                        <div className="flex gap-4">
+                          {/* Avatar Side */}
+                          <div className="w-10 h-10 rounded-full bg-secondary/20 flex-shrink-0 flex items-center justify-center font-bold text-secondary overflow-hidden">
+                            {(post.author.avatarUrl || (post.author as any).profile?.avatarUrl) ? (
+                              <img src={post.author.avatarUrl || (post.author as any).profile?.avatarUrl} alt={post.author.username} className="w-full h-full object-cover" />
+                            ) : (
+                              post.author.username.substring(0,2).toUpperCase()
+                            )}
+                          </div>
+                          
+                          {/* Content Side */}
+                          <div className="flex-1 min-w-0">
+                            {/* Header */}
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold font-display">{post.author.displayName || post.author.username}</span>
+                              {(post.author as any).roles?.includes("verified") && <BadgeCheck className="w-4 h-4 text-primary fill-primary/20" />}
+                              <span className="text-muted-foreground font-mono text-xs">@{post.author.username}</span>
+                              <span className="text-muted-foreground text-xs">·</span>
+                              <span className="text-muted-foreground text-xs hover:underline cursor-pointer">{new Date(post.createdAt || Date.now()).toLocaleDateString()}</span>
+                            </div>
+                            
+                            {/* Text */}
+                            <p className="text-foreground/90 whitespace-pre-wrap mb-4 leading-normal">
+                              {post.content}
+                            </p>
+
+                            {/* TODO: miniApp renderer */}
+
+                            {/* Action Bar */}
+                            <div className="flex items-center justify-between text-muted-foreground max-w-md w-full">
+                              <button className="flex items-center gap-2 hover:text-primary transition-colors group">
+                                <div className="p-2 rounded-full group-hover:bg-primary/10">
+                                  <MessageSquare className="w-4 h-4" />
+                                </div>
+                                <span className="text-xs font-mono">{post.replyCount}</span>
+                              </button>
+                              
+                              <button 
+                                onClick={() => !post.viewerContext?.reposted && repostPost(post.id)}
+                                className={`flex items-center gap-2 transition-colors group ${post.viewerContext?.reposted ? "text-green-500" : "hover:text-green-500"}`}
+                              >
+                                <div className={`p-2 rounded-full ${post.viewerContext?.reposted ? "bg-green-500/10" : "group-hover:bg-green-500/10"}`}>
+                                  <Repeat2 className="w-4 h-4" />
+                                </div>
+                                <span className="text-xs font-mono">{post.repostCount}</span>
+                              </button>
+                              
+                              <button 
+                                onClick={() => !post.viewerContext?.hasLiked && !post.viewerContext?.liked && likePost(post.id)}
+                                className={`flex items-center gap-2 transition-colors group ${post.viewerContext?.hasLiked || post.viewerContext?.liked ? "text-red-500" : "hover:text-red-500"}`}
+                              >
+                                <div className={`p-2 rounded-full ${post.viewerContext?.hasLiked || post.viewerContext?.liked ? "bg-red-500/10" : "group-hover:bg-red-500/10"}`}>
+                                  <Heart className={`w-4 h-4 ${post.viewerContext?.hasLiked || post.viewerContext?.liked ? "fill-red-500" : ""}`} />
+                                </div>
+                                <span className="text-xs font-mono">{post.likeCount}</span>
+                              </button>
+                              
+                              <button className="flex items-center gap-2 hover:text-primary transition-colors group">
+                                <div className="p-2 rounded-full group-hover:bg-primary/10">
+                                  <Share className="w-4 h-4" />
+                                </div>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {feed.hasNextPage && (
+                      <div className="p-4 flex justify-center">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => feed.fetchNextPage()}
+                          disabled={feed.isFetchingNextPage}
+                        >
+                          {feed.isFetchingNextPage ? "Loading more..." : "Load more"}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </TabsContent>
           </Tabs>

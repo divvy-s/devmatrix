@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -8,9 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/global/icons";
-import { CheckCircle2, ChevronRight, UploadCloud, Rocket, Check, ArrowRight } from "lucide-react";
+import { CheckCircle2, ChevronRight, UploadCloud, Rocket, Check, ArrowRight, AlertCircle, Star, Loader2 } from "lucide-react";
+import { useGitHubRepos, GitHubRepo } from "@/hooks/use-github";
+import { apiPost } from "@/lib/api";
+import { useBackendToken } from "@/hooks/use-api";
 
 export default function SubmitProjectPage() {
+  const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     repo: "",
@@ -20,6 +27,27 @@ export default function SubmitProjectPage() {
     tags: "",
     permissions: [] as string[]
   });
+  const [deploying, setDeploying] = useState(false);
+  const token = useBackendToken();
+
+  // Pre-fill from Assets page query params
+  useEffect(() => {
+    const repo = searchParams.get("repo");
+    const name = searchParams.get("name");
+    const desc = searchParams.get("desc");
+    if (repo) {
+      setFormData(prev => ({
+        ...prev,
+        repo,
+        name: name || prev.name,
+        description: desc || prev.description,
+      }));
+      setStep(2); // Skip step 1 since repo is already selected
+    }
+  }, [searchParams]);
+
+  const { data: repos, isPending: reposLoading, isError: reposError } = useGitHubRepos();
+  const hasGitHub = !!(session as any)?.githubAccessToken;
 
   const PERMISSIONS = [
     { id: "post.write", name: "Write Posts", desc: "Allows the app to publish receipts or messages to the user's feed." },
@@ -40,10 +68,54 @@ export default function SubmitProjectPage() {
     }))
   };
 
+  const generateSlug = () => {
+    return formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  };
+
+  const handleDeploy = async (saveAsDraft: boolean) => {
+    if (!token) return;
+    setDeploying(true);
+    try {
+      const slug = generateSlug();
+      // 1. Create App
+      await apiPost("/api/apps", {
+        token,
+        body: JSON.stringify({
+          slug,
+          name: formData.name,
+          description: formData.description,
+          category: formData.category,
+          repoUrl: formData.repo,
+        }),
+      });
+
+      // 2. Create Version if deploying
+      if (!saveAsDraft) {
+        await apiPost(`/api/apps/${slug}/versions`, {
+          token,
+          body: JSON.stringify({
+            version: "1.0.0",
+            manifest: {
+              tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+              permissions: formData.permissions,
+            },
+            entryUrl: `https://github.com/${formData.repo}`, // Fallback entry URL to the repo itself
+          }),
+        });
+      }
+      
+      setStep(5);
+    } catch (err: any) {
+      alert("Failed to deploy: " + (err.message || "Unknown error"));
+    } finally {
+      setDeploying(false);
+    }
+  };
+
   const isStepValid = () => {
     if (step === 1) return formData.repo !== "";
     if (step === 2) return formData.name !== "" && formData.description !== "";
-    if (step === 3) return true; // Permissions optional?
+    if (step === 3) return true;
     return true;
   };
 
@@ -86,19 +158,80 @@ export default function SubmitProjectPage() {
               <h2 className="text-2xl font-display font-bold mb-2">Connect GitHub Repository</h2>
               <p className="text-muted-foreground mb-8">Link the repository containing your CastKit mini-app source code.</p>
               
-              {!formData.repo ? (
-                <div className="w-full max-w-sm space-y-4">
-                  <Button variant="outline" className="w-full h-12 justify-start border-border/50 hover:bg-white/5" onClick={() => setFormData({...formData, repo: "alice/coffee-tip"})}>
-                    <Icons.gitHub className="w-5 h-5 mr-3" /> alice/coffee-tip
-                  </Button>
-                  <Button variant="outline" className="w-full h-12 justify-start border-border/50 hover:bg-white/5" onClick={() => setFormData({...formData, repo: "alice/nft-minter"})}>
-                    <Icons.gitHub className="w-5 h-5 mr-3" /> alice/nft-minter
-                  </Button>
-                  <div className="relative">
+              {!hasGitHub ? (
+                <div className="w-full max-w-sm space-y-4 text-center">
+                  <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5">
+                    <AlertCircle className="w-5 h-5 text-yellow-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-3">Sign in with GitHub to access your repositories.</p>
+                    <Button 
+                      variant="outline" 
+                      className="border-border/50"
+                      onClick={() => {
+                        const { signIn } = require("next-auth/react");
+                        signIn("github", { callbackUrl: "/submit" });
+                      }}
+                    >
+                      <Icons.gitHub className="w-4 h-4 mr-2" />
+                      Connect GitHub
+                    </Button>
+                  </div>
+                </div>
+              ) : !formData.repo ? (
+                <div className="w-full max-w-lg space-y-3">
+                  {reposLoading ? (
+                    <div className="flex flex-col items-center gap-3 py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                      <p className="text-sm text-muted-foreground font-mono">Fetching your repos...</p>
+                    </div>
+                  ) : reposError ? (
+                    <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-center">
+                      <AlertCircle className="w-5 h-5 text-destructive mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Failed to load repositories. Try re-authenticating with GitHub.</p>
+                    </div>
+                  ) : repos && repos.length > 0 ? (
+                    <div className="max-h-[320px] overflow-y-auto space-y-2 pr-1 scrollbar-hide">
+                      {repos.map((repo: GitHubRepo) => (
+                        <Button 
+                          key={repo.id} 
+                          variant="outline" 
+                          className="w-full h-auto py-3 justify-start border-border/50 hover:bg-white/5 hover:border-primary/40 transition-all"
+                          onClick={() => setFormData({ ...formData, repo: repo.full_name, name: repo.name, description: repo.description || "" })}
+                        >
+                          <div className="flex items-center gap-3 w-full min-w-0">
+                            <Icons.gitHub className="w-5 h-5 shrink-0 text-muted-foreground" />
+                            <div className="flex-1 min-w-0 text-left">
+                              <p className="font-mono text-sm truncate">{repo.full_name}</p>
+                              {repo.description && (
+                                <p className="text-xs text-muted-foreground truncate mt-0.5">{repo.description}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {repo.language && <Badge variant="outline" className="text-[9px] border-border/50">{repo.language}</Badge>}
+                              <span className="flex items-center gap-0.5 text-xs text-yellow-400 font-mono">
+                                <Star className="w-3 h-3" />{repo.stargazers_count}
+                              </span>
+                            </div>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-muted-foreground text-sm font-mono">No repositories found.</div>
+                  )}
+                  <div className="relative mt-2">
                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border/40" /></div>
                     <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0c0c0c] px-2 text-muted-foreground">Or</span></div>
                   </div>
-                  <Input placeholder="paste repository url..." className="border-border/50 h-12 font-mono" />
+                  <Input 
+                    placeholder="paste repository url..." 
+                    className="border-border/50 h-12 font-mono" 
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const url = (e.target as HTMLInputElement).value.trim();
+                        if (url) setFormData({ ...formData, repo: url });
+                      }
+                    }}
+                  />
                 </div>
               ) : (
                 <div className="w-full max-w-sm p-4 border border-primary/30 bg-primary/5 rounded-xl flex items-center justify-between">
@@ -247,7 +380,7 @@ export default function SubmitProjectPage() {
                 <span className="text-foreground font-medium">{formData.name}</span> has been deployed to the CastKit registry and is now awaiting indexing.
               </p>
               <div className="p-4 rounded border border-border/50 bg-card/50 flex items-center justify-between w-full max-w-md mb-8">
-                <span className="font-mono text-sm text-muted-foreground">castkit.xyz/app/alice/coffee-tip</span>
+                <span className="font-mono text-sm text-muted-foreground">castkit.xyz/app/{formData.repo}</span>
                 <Button variant="outline" size="sm" className="h-8 shadow-none">Copy URL</Button>
               </div>
               <a href="/dashboard" className={cn(buttonVariants({ variant: "default" }), "bg-primary text-primary-foreground hover:bg-primary/90")}>
@@ -263,19 +396,32 @@ export default function SubmitProjectPage() {
           <Button 
             variant="outline" 
             onClick={handleBack} 
-            disabled={step === 1}
+            disabled={step === 1 || deploying}
             className="border-border/50 bg-background/50 hover:bg-white/5"
           >
             Go Back
           </Button>
-          <Button 
-            onClick={handleNext} 
-            disabled={!isStepValid()}
-            className={`${step === 4 ? "bg-primary text-primary-foreground font-bold font-mono" : "bg-white text-black font-mono font-bold"}`}
-          >
-            {step === 4 ? "Sign & Deploy" : "Continue"}
-            {step === 4 ? <Rocket className="w-4 h-4 ml-2" /> : <ArrowRight className="w-4 h-4 ml-2" />}
-          </Button>
+          <div className="flex items-center gap-3">
+            {step === 4 && (
+              <Button
+                variant="outline"
+                disabled={deploying}
+                className="font-mono bg-background/50 hover:bg-white/5"
+                onClick={() => handleDeploy(true)}
+              >
+                Save as Draft
+              </Button>
+            )}
+            <Button 
+              onClick={() => step === 4 ? handleDeploy(false) : handleNext()} 
+              disabled={!isStepValid() || deploying}
+              className={`${step === 4 ? "bg-primary text-primary-foreground font-bold font-mono" : "bg-white text-black font-mono font-bold"}`}
+            >
+              {deploying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {step === 4 ? "Sign & Deploy" : "Continue"}
+              {step === 4 && !deploying ? <Rocket className="w-4 h-4 ml-2" /> : step !== 4 ? <ArrowRight className="w-4 h-4 ml-2" /> : null}
+            </Button>
+          </div>
         </div>
       )}
     </div>

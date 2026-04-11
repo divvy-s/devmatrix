@@ -8,10 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  Download, Activity, DollarSign, Plug, Settings, Plus,
-  BarChart3, Clock, AlertCircle, Zap, TrendingUp, ArrowUpRight, User
+import { Download, Activity, DollarSign, Plug, Settings, Plus,
+  BarChart3, Clock, AlertCircle, Zap, TrendingUp, ArrowUpRight, User, Loader2
 } from "lucide-react";
+import { useMyApps } from "@/hooks/use-apps";
 
 const STATS = [
   { label: "Total Installs", value: "124,592", delta: "+20.1%", icon: Download, color: "text-primary", deltaColor: "text-primary" },
@@ -20,15 +20,10 @@ const STATS = [
   { label: "Active Apps", value: "3", delta: "1 update pending", icon: Plug, color: "text-accent", deltaColor: "text-yellow-500" },
 ];
 
-const MY_APPS = [
-  { name: "Coffee Tip", type: "Social", status: "Live", statusColor: "green" as const, installs: "120.4k", rev: "$7,240", icon: "☕" },
-  { name: "NFT Drop Widget", type: "Web3", status: "Live", statusColor: "green" as const, installs: "4.1k", rev: "$1,219", icon: "🎨" },
-  { name: "DAO Vote", type: "Governance", status: "In Review", statusColor: "yellow" as const, installs: "—", rev: "$0", icon: "⚖️" },
-];
-
-const STATUS_STYLES = {
-  green: "border-green-500/30 text-green-500 bg-green-500/10",
-  yellow: "border-yellow-500/30 text-yellow-500 bg-yellow-500/10",
+const STATUS_STYLES: Record<string, string> = {
+  approved: "border-green-500/30 text-green-500 bg-green-500/10",
+  pending: "border-yellow-500/30 text-yellow-500 bg-yellow-500/10",
+  draft: "border-zinc-500/30 text-zinc-500 bg-zinc-500/10",
 };
 
 const ACTIVITY = [
@@ -40,6 +35,7 @@ const ACTIVITY = [
 export default function DashboardPage() {
   const { data: session } = useSession();
   const user = session?.user;
+  const { data: appsData, isLoading: appsLoading } = useMyApps();
 
   return (
     <div className="container mx-auto px-4 md:px-6 py-8 sm:py-12 max-w-7xl">
@@ -151,29 +147,31 @@ export default function DashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/30">
-                      {MY_APPS.map((app) => (
-                        <tr key={app.name} className="hover:bg-white/3 transition-colors group">
+                      {appsLoading ? (
+                        <tr><td colSpan={5} className="py-8 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mx-auto"/></td></tr>
+                      ) : (appsData?.pages.flatMap(p => p.data) || []).map((app: any) => (
+                        <tr key={app.id} className="hover:bg-white/3 transition-colors group">
                           <td className="px-5 sm:px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center shrink-0 text-base">
-                                {app.icon}
+                                {app.iconUrl ? <img src={app.iconUrl} className="w-6 h-6 rounded-md object-cover" alt="" /> : "☕"}
                               </div>
                               <div>
                                 <div className="font-bold text-sm">{app.name}</div>
-                                <div className="text-xs text-muted-foreground font-mono">{app.type}</div>
+                                <div className="text-xs text-muted-foreground font-mono">{app.category || app.type}</div>
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-4">
                             <Badge
                               variant="outline"
-                              className={`font-mono text-[10px] uppercase ${STATUS_STYLES[app.statusColor]}`}
+                              className={`font-mono text-[10px] uppercase ${STATUS_STYLES[app.status] || STATUS_STYLES.draft}`}
                             >
                               {app.status}
                             </Badge>
                           </td>
-                          <td className="px-4 py-4 text-right font-mono text-muted-foreground text-sm">{app.installs}</td>
-                          <td className="px-4 py-4 text-right font-mono text-sm">{app.rev}</td>
+                          <td className="px-4 py-4 text-right font-mono text-muted-foreground text-sm">{app.installCount || 0}</td>
+                          <td className="px-4 py-4 text-right font-mono text-sm">$0</td>
                           <td className="px-4 py-4 text-right">
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                               <Settings className="w-4 h-4" />
@@ -187,28 +185,30 @@ export default function DashboardPage() {
 
                 {/* Mobile Card Stack */}
                 <div className="sm:hidden flex flex-col divide-y divide-border/30">
-                  {MY_APPS.map((app) => (
-                    <div key={app.name} className="flex items-center justify-between p-4 hover:bg-white/3 transition-colors">
+                  {appsLoading ? (
+                    <div className="py-8 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mx-auto"/></div>
+                  ) : (appsData?.pages.flatMap(p => p.data) || []).map((app: any) => (
+                    <div key={app.id} className="flex items-center justify-between p-4 hover:bg-white/3 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-card border border-border/50 flex items-center justify-center text-lg shrink-0">
-                          {app.icon}
+                          {app.iconUrl ? <img src={app.iconUrl} className="w-6 h-6 rounded-md object-cover" alt="" /> : "☕"}
                         </div>
                         <div>
                           <div className="font-bold text-sm">{app.name}</div>
                           <div className="flex items-center gap-2 mt-0.5">
                             <Badge
                               variant="outline"
-                              className={`font-mono text-[9px] uppercase px-1.5 py-0 ${STATUS_STYLES[app.statusColor]}`}
+                              className={`font-mono text-[9px] uppercase px-1.5 py-0 ${STATUS_STYLES[app.status] || STATUS_STYLES.draft}`}
                             >
                               {app.status}
                             </Badge>
-                            <span className="text-xs text-muted-foreground font-mono">{app.type}</span>
+                            <span className="text-xs text-muted-foreground font-mono">{app.category || app.type}</span>
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-mono text-sm font-bold">{app.rev}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{app.installs} installs</div>
+                        <div className="font-mono text-sm font-bold">$0</div>
+                        <div className="text-xs text-muted-foreground font-mono">{app.installCount || 0} installs</div>
                       </div>
                     </div>
                   ))}

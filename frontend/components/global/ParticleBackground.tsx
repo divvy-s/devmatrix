@@ -52,8 +52,8 @@ export const ParticleBackground = () => {
       colorOpBase: number;
 
       constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
+        this.x = Math.random() * canvas!.width;
+        this.y = Math.random() * canvas!.height;
         this.size = Math.random() * 2 + 0.5;
         this.speedX = (Math.random() - 0.5) * 0.4;
         this.speedY = (Math.random() - 0.5) * 0.4;
@@ -67,10 +67,10 @@ export const ParticleBackground = () => {
         this.y += this.speedY;
 
         // Wrap around edges
-        if (this.x > canvas.width + 10) this.x = -10;
-        if (this.x < -10) this.x = canvas.width + 10;
-        if (this.y > canvas.height + 10) this.y = -10;
-        if (this.y < -10) this.y = canvas.height + 10;
+        if (this.x > canvas!.width + 10) this.x = -10;
+        if (this.x < -10) this.x = canvas!.width + 10;
+        if (this.y > canvas!.height + 10) this.y = -10;
+        if (this.y < -10) this.y = canvas!.height + 10;
 
         // Mouse interaction (repel slightly, but connect with lines)
         let dx = mouse.x - this.x;
@@ -112,7 +112,7 @@ export const ParticleBackground = () => {
     };
 
     const animate = () => {
-      if (!ctx) return;
+      if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       for (let i = 0; i < particles.length; i++) {

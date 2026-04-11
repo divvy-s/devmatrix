@@ -8,12 +8,14 @@ import { Icons } from "@/components/global/icons";
 import { Wallet, Menu, X, Zap } from "lucide-react";
 import { useState } from "react";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, signIn } from "next-auth/react";
 import Image from "next/image";
 import { LogOut } from "lucide-react";
+import { useMounted } from "@/hooks/use-mounted";
 
 const NAV_LINKS = [
   { href: "/explore", label: "Explore" },
+  { href: "/assets", label: "Assets" },
   { href: "/docs", label: "Docs" },
   { href: "/submit", label: "Submit App" },
 ];
@@ -22,6 +24,7 @@ export function NavBar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { data: session, status } = useSession();
+  const mounted = useMounted();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
@@ -61,13 +64,14 @@ export function NavBar() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => signIn("github", { callbackUrl: pathname })}
             className="group border-border/50 hover:border-accent/50 hover:bg-accent/5 transition-all duration-200"
           >
             <Icons.gitHub className="mr-2 h-4 w-4 group-hover:text-accent transition-colors" />
             GitHub
           </Button>
 
-          {status === "loading" ? (
+          {!mounted || status === "loading" ? (
             <div className="w-24 h-9 animate-pulse bg-white/5 rounded-md" />
           ) : session?.user ? (
             <Link href="/profile" className="flex items-center gap-3 border border-border/50 rounded-lg pl-2 pr-1 py-1 bg-card/50 hover:border-primary/40 transition-colors group">
@@ -110,7 +114,7 @@ export function NavBar() {
 
         {/* Mobile Menu */}
         <div className="flex md:hidden items-center gap-2">
-          {status === "loading" ? (
+          {!mounted || status === "loading" ? (
             <div className="w-9 h-9 animate-pulse bg-white/5 rounded-md" />
           ) : session?.user ? (
             <Link href="/profile" className="w-9 h-9 relative block">
@@ -191,6 +195,7 @@ export function NavBar() {
               <div className="absolute bottom-0 left-0 right-0 p-5 border-t border-border/40 flex flex-col gap-3">
                 <Button
                   variant="outline"
+                  onClick={() => signIn("github", { callbackUrl: pathname })}
                   className="w-full justify-start border-border/50 hover:border-accent/50 hover:bg-accent/5"
                 >
                   <Icons.gitHub className="mr-2 h-4 w-4" />
