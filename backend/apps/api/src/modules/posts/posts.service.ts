@@ -25,6 +25,9 @@ export class PostsService {
     authorId: string,
     data: {
       content: string;
+      title?: string;
+      appId?: string;
+      tags?: string[];
       parentId?: string;
       quotedPostId?: string;
       mediaIds?: string[];
@@ -79,6 +82,9 @@ export class PostsService {
         id: postId,
         authorId,
         content: data.content,
+        title: data.title ?? null,
+        appId: data.appId ?? null,
+        tags: data.tags ?? [],
         parentId: actualParentId,
         rootId,
         postType,

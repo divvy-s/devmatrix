@@ -22,7 +22,10 @@ export async function postsRoutes(app: FastifyInstance) {
       preHandler: [authenticateRequest],
       schema: {
         body: z.object({
+          title: z.string().optional(),
           content: z.string().min(1).max(500),
+          appId: z.string().uuid().optional(),
+          tags: z.array(z.string()).optional(),
           parentId: z.string().uuid().optional(),
           quotedPostId: z.string().uuid().optional(),
           mediaIds: z.array(z.string().uuid()).max(4).optional(),

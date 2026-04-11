@@ -15,6 +15,13 @@
       "when": 1775916130573,
       "tag": "0001_gigantic_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775923643383,
+      "tag": "0002_cooing_mole_man",
+      "breakpoints": true
     }
   ]
 }

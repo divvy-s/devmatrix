@@ -308,7 +308,10 @@ export const posts = pgTable(
     authorId: uuid('author_id')
       .notNull()
       .references(() => users.id),
+    title: text('title'),
     content: text('content').notNull(),
+    appId: uuid('app_id').references(() => apps.id),
+    tags: jsonb('tags').$type<string[]>().default([]),
     parentId: uuid('parent_id').references((): any => posts.id),
     rootId: uuid('root_id').references((): any => posts.id),
     postType: text('post_type').notNull(),
