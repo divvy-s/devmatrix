@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { ethers } from 'ethers';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { db, users, userProfiles, walletAddresses, externalIdentities, sessions, outboxEvents } from '@workspace/db';
 import { redisConnection } from '@workspace/queue';

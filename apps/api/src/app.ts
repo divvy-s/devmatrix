@@ -1,4 +1,5 @@
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
@@ -26,6 +27,9 @@ export const buildApp = async () => {
     logger: false, // We will use our custom logger hook
     disableRequestLogging: true,
   });
+
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   // Plugins
   await app.register(cors, { origin: true });

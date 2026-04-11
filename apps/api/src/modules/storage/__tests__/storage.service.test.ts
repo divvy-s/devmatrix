@@ -25,10 +25,10 @@ test('Storage payload constrains keys perfectly bounding local payload restricti
     const service = new StorageService();
     
     const largeValue = 'a'.repeat(70000); // 70 KB > 64KB max threshold
-    await expect(service.putStorage('app1', 'user1', 'validKey', largeValue)).rejects.toThrow('Value exceeds 64KB');
+    await expect(service.putStorage('app1', 'user1', 'validKey', largeValue)).rejects.toThrow('PAYLOAD_TOO_LARGE');
     
     const largeKey = 'k'.repeat(260); // > 255 valid threshold max
-    await expect(service.putStorage('app1', 'user1', largeKey, 'valid')).rejects.toThrow('Key exceeds 255 chars');
+    await expect(service.putStorage('app1', 'user1', largeKey, 'valid')).rejects.toThrow('INVALID_KEY');
 });
 
 test('Cross-app storage isolates by filtering logically over dual constraints including both User contexts strictly bound to exact applications', async () => {
