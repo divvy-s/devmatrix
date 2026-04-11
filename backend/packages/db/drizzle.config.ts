@@ -5,7 +5,7 @@ export default defineConfig({
   out: './drizzle',
   driver: 'pg',
   dbCredentials: {
-    connectionString: process.env.DATABASE_URL as string,
+    connectionString: process.env.DATABASE_URL as string || 'postgres://postgres:password@127.0.0.1:5432/web3_social',
   },
   verbose: true,
   strict: true,

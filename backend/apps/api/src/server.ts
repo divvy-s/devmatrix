@@ -1,5 +1,5 @@
-import { outboxWorker } from './infrastructure/outbox.worker';
 import 'dotenv-safe/config';
+import { outboxWorker } from './infrastructure/outbox.worker';
 import { buildApp } from './app';
 import { createLogger } from '@workspace/logger';
 

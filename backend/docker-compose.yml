@@ -8,12 +8,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: web3_social
-    ports:
-      - "5432:5432"
+    network_mode: "host"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,10 +20,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: web3_social_redis
-    ports:
-      - "6379:6379"
+    network_mode: "host"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -32,8 +30,7 @@ services:
   adminer:
     image: adminer
     container_name: web3_social_adminer
-    ports:
-      - "8080:8080"
+    network_mode: "host"
     depends_on:
       - postgres
 
