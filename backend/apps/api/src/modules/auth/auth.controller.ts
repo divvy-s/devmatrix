@@ -32,6 +32,17 @@ export class AuthController {
     return reply.send(result);
   };
 
+  verifyGitHub = async (
+    request: FastifyRequest<{
+      Body: { accessToken: string };
+    }>,
+    reply: FastifyReply,
+  ) => {
+    const { accessToken } = request.body;
+    const result = await this.authService.verifyGitHub(accessToken);
+    return reply.send(result);
+  };
+
   refresh = async (
     request: FastifyRequest<{ Body?: { refreshToken?: string } }>,
     reply: FastifyReply,

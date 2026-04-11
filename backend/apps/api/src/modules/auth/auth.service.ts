@@ -161,6 +161,119 @@ export class AuthService {
     };
   }
 
+  async verifyGitHub(githubAccessToken: string) {
+    // 1. Call GitHub API to get user info
+    const ghRes = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!ghRes.ok) {
+      throw new UnauthorizedError('INVALID_GITHUB_TOKEN');
+    }
+
+    const ghUser = (await ghRes.json()) as {
+      id: number;
+      login: string;
+      avatar_url: string;
+      email: string | null;
+    };
+
+    const githubId = String(ghUser.id);
+
+    // 2. Look up or create user
+    let finalUserId: string;
+    let finalRoles: any;
+    let finalUsername: string;
+
+    await db.transaction(async (tx) => {
+      const existingIdentityArr = await tx
+        .select()
+        .from(externalIdentities)
+        .where(
+          and(
+            eq(externalIdentities.provider, 'github'),
+            eq(externalIdentities.providerId, githubId),
+          ),
+        )
+        .limit(1);
+      const existingIdentity = existingIdentityArr[0];
+
+      if (existingIdentity) {
+        finalUserId = existingIdentity.userId;
+        const userArr = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, finalUserId))
+          .limit(1);
+        finalUsername = userArr[0]?.username ?? ghUser.login;
+        finalRoles = userArr[0]?.roles;
+      } else {
+        // Create new user from GitHub profile
+        finalUserId = uuidv4();
+        finalUsername = ghUser.login || `gh_${crypto.randomBytes(4).toString('hex')}`;
+
+        await tx.insert(users).values({
+          id: finalUserId,
+          username: finalUsername,
+          roles: ['user'],
+        });
+
+        await tx.insert(userProfiles).values({
+          userId: finalUserId,
+          avatarUrl: ghUser.avatar_url,
+        });
+
+        await tx.insert(externalIdentities).values({
+          userId: finalUserId,
+          provider: 'github',
+          providerId: githubId,
+          verifiedAt: new Date(),
+        });
+
+        await tx.insert(outboxEvents).values({
+          type: 'user.created',
+          payload: { userId: finalUserId, username: finalUsername, provider: 'github' },
+        });
+
+        finalRoles = ['user'];
+      }
+    });
+
+    // 3. Create session + tokens
+    const sessionId = uuidv4();
+    const refreshToken = crypto.randomBytes(32).toString('hex');
+    const hash = await bcrypt.hash(refreshToken, 10);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await db.insert(sessions).values({
+      id: sessionId,
+      userId: finalUserId!,
+      refreshTokenHash: hash,
+      expiresAt,
+    });
+
+    const accessToken = jwt.sign(
+      { sub: finalUserId!, roles: finalRoles, session_id: sessionId },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN as any },
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: finalUserId!,
+        username: finalUsername!,
+        roles: finalRoles,
+      },
+    };
+  }
+
   async refresh(refreshToken: string) {
     const hashedSessionArr = await db
       .select()

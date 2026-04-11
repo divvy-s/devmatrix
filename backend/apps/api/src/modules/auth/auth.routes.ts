@@ -35,6 +35,18 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   server.post(
+    '/github',
+    {
+      schema: {
+        body: z.object({
+          accessToken: z.string().min(1),
+        }),
+      },
+    },
+    controller.verifyGitHub as any,
+  );
+
+  server.post(
     '/refresh',
     {
       schema: {

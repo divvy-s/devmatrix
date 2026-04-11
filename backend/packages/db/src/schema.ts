@@ -545,6 +545,7 @@ export const apps = pgTable(
     description: text('description'),
     category: text('category').notNull(),
     iconUrl: text('icon_url'),
+    repoUrl: text('repo_url'),
     status: text('status').notNull().default('draft'),
     currentVersionId: uuid('current_version_id'),
     installCount: integer('install_count').notNull().default(0),
@@ -985,6 +986,38 @@ export const appAnalyticsRollups = pgTable(
       ),
     };
   },
+);
+
+export const githubAssets = pgTable(
+  'github_assets',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    repo: text('repo').notNull(),
+    name: text('name').notNull(),
+    description: text('description').notNull().default(''),
+    category: text('category').notNull().default(''),
+    tags: text('tags').notNull().default(''),
+    permissions: jsonb('permissions').notNull().default('[]'),
+    status: text('status').notNull().default('draft'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIdx: index('github_assets_user_idx').on(table.userId),
+    userRepoUnique: uniqueIndex('github_assets_user_repo_unique').on(
+      table.userId,
+      table.repo,
+    ),
+  }),
 );
 
 export const featureFlags = pgTable('feature_flags', {

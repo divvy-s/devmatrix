@@ -23,6 +23,7 @@ export class AppsService {
       description?: string;
       category: string;
       iconUrl?: string;
+      repoUrl?: string;
     },
   ) {
     const devArr = await db
@@ -54,6 +55,7 @@ export class AppsService {
         description: data.description,
         category: data.category,
         iconUrl: data.iconUrl,
+        repoUrl: data.repoUrl,
         status: 'draft',
       })
       .returning();

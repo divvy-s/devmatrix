@@ -8,7 +8,7 @@ const logger = createLogger('server');
 const start = async () => {
   try {
     const app = await buildApp();
-    const port = parseInt(process.env.PORT || '3000', 10);
+    const port = parseInt(process.env.PORT || '8080', 10);
 
     if (process.env.NODE_ENV !== 'test') {
       outboxWorker.start();

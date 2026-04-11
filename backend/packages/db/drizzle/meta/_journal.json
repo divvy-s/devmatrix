@@ -8,6 +8,13 @@
       "when": 1775904175733,
       "tag": "0000_flimsy_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1775916130573,
+      "tag": "0001_gigantic_blizzard",
+      "breakpoints": true
     }
   ]
 }

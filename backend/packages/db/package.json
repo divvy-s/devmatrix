@@ -7,7 +7,7 @@
   "types": "src/index.ts",
   "scripts": {
     "generate": "drizzle-kit generate:pg",
-    "migrate": "drizzle-kit push:pg"
+    "migrate": "npx tsx src/migrate.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.30.9",
