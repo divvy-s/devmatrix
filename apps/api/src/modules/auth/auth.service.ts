@@ -2,7 +2,15 @@ import crypto from 'crypto';
 import { ethers } from 'ethers';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db, users, userProfiles, walletAddresses, externalIdentities, sessions, outboxEvents } from '@workspace/db';
+import {
+  db,
+  users,
+  userProfiles,
+  walletAddresses,
+  externalIdentities,
+  sessions,
+  outboxEvents,
+} from '@workspace/db';
 import { redisConnection } from '@workspace/queue';
 import { UnauthorizedError } from '@workspace/errors';
 import { eq, and, isNull, gt } from 'drizzle-orm';
@@ -10,13 +18,16 @@ import { v4 as uuidv4 } from 'uuid';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'supersecretrefresh';
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || 'supersecretrefresh';
 const APP_NAME = 'Web3Social';
 
 export class AuthService {
-  async generateNonce(address: string): Promise<{ nonce: string; message: string }> {
+  async generateNonce(
+    address: string,
+  ): Promise<{ nonce: string; message: string }> {
     const normalized = address.toLowerCase();
-    
+
     if (!/^0x[a-f0-9]{40}$/i.test(normalized)) {
       throw new UnauthorizedError('INVALID_ADDRESS');
     }
@@ -26,14 +37,18 @@ export class AuthService {
     const message = `Sign in to ${APP_NAME}\\n\\nNonce: ${nonce}\\nIssued at: ${isoTimestamp}\\n\\nThis request will expire in 5 minutes.`;
 
     // Store the full message so we can verify exactly
-    await redisConnection.setex(`nonce:${normalized}`, 300, JSON.stringify({ nonce, message }));
+    await redisConnection.setex(
+      `nonce:${normalized}`,
+      300,
+      JSON.stringify({ nonce, message }),
+    );
 
     return { nonce, message };
   }
 
   async verifyWallet(address: string, signature: string, nonce: string) {
     const normalized = address.toLowerCase();
-    
+
     const storedStr = await redisConnection.get(`nonce:${normalized}`);
     if (!storedStr) {
       throw new UnauthorizedError('NONCE_NOT_FOUND');
@@ -59,19 +74,27 @@ export class AuthService {
     let finalUsername: string;
 
     await db.transaction(async (tx) => {
-      const existingWalletArr = await tx.select().from(walletAddresses).where(eq(walletAddresses.address, normalized)).limit(1);
+      const existingWalletArr = await tx
+        .select()
+        .from(walletAddresses)
+        .where(eq(walletAddresses.address, normalized))
+        .limit(1);
       const existingWallet = existingWalletArr[0];
 
       if (existingWallet) {
         finalUserId = existingWallet.userId;
-        const userArr = await tx.select().from(users).where(eq(users.id, finalUserId)).limit(1);
+        const userArr = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, finalUserId))
+          .limit(1);
         finalUsername = userArr[0]?.username ?? '';
         finalRoles = userArr[0]?.roles;
       } else {
         // Create user
         finalUserId = uuidv4();
         finalUsername = `user_${crypto.randomBytes(4).toString('hex')}`;
-        
+
         await tx.insert(users).values({
           id: finalUserId,
           username: finalUsername,
@@ -101,7 +124,7 @@ export class AuthService {
           type: 'user.created',
           payload: { userId: finalUserId, username: finalUsername },
         });
-        
+
         finalRoles = ['user'];
       }
     });
@@ -109,7 +132,7 @@ export class AuthService {
     const sessionId = uuidv4();
     const refreshToken = crypto.randomBytes(32).toString('hex');
     const hash = await bcrypt.hash(refreshToken, 10);
-    
+
     // expiry 30 days
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
@@ -124,7 +147,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       { sub: finalUserId!, roles: finalRoles, session_id: sessionId },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN as any }
+      { expiresIn: JWT_EXPIRES_IN as any },
     );
 
     return {
@@ -134,7 +157,7 @@ export class AuthService {
         id: finalUserId!,
         username: finalUsername!,
         roles: finalRoles,
-      }
+      },
     };
   }
 
@@ -142,7 +165,9 @@ export class AuthService {
     const hashedSessionArr = await db
       .select()
       .from(sessions)
-      .where(and(isNull(sessions.revokedAt), gt(sessions.expiresAt, new Date())));
+      .where(
+        and(isNull(sessions.revokedAt), gt(sessions.expiresAt, new Date())),
+      );
 
     // we must find a match
     let matchedSession = null;
@@ -158,17 +183,24 @@ export class AuthService {
     }
 
     // Immediately set revoked_at = NOW() on the old session
-    await db.update(sessions)
+    await db
+      .update(sessions)
       .set({ revokedAt: new Date() })
       .where(eq(sessions.id, matchedSession.id));
 
-    // Note: if multiple uses handling requires checking if the session was already revoked beforehand, but our query above checked isNull. 
+    // Note: if multiple uses handling requires checking if the session was already revoked beforehand, but our query above checked isNull.
     // If we want to check theft, we would select even revoked ones and compare.
-    const allSessions = await db.select().from(sessions).where(eq(sessions.userId, matchedSession.userId));
+    const allSessions = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.userId, matchedSession.userId));
     // simplified check for theft: if we found a match among revoked, it means replay!
     let matchingRevoked = null;
     for (const s of allSessions) {
-      if (s.revokedAt && await bcrypt.compare(refreshToken, s.refreshTokenHash)) {
+      if (
+        s.revokedAt &&
+        (await bcrypt.compare(refreshToken, s.refreshTokenHash))
+      ) {
         matchingRevoked = s;
         break;
       }
@@ -176,10 +208,13 @@ export class AuthService {
 
     if (matchingRevoked) {
       // Revoke all
-      await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.userId, matchedSession.userId));
+      await db
+        .update(sessions)
+        .set({ revokedAt: new Date() })
+        .where(eq(sessions.userId, matchedSession.userId));
       await db.insert(outboxEvents).values({
         type: 'security_event',
-        payload: { userId: matchedSession.userId, type: 'REFRESH_TOKEN_THEFT' }
+        payload: { userId: matchedSession.userId, type: 'REFRESH_TOKEN_THEFT' },
       });
       throw new UnauthorizedError('INVALID_REFRESH_TOKEN');
     }
@@ -194,28 +229,42 @@ export class AuthService {
       id: sessionId,
       userId: matchedSession.userId,
       refreshTokenHash: hash,
-      expiresAt
+      expiresAt,
     });
 
-    const userArr = await db.select().from(users).where(eq(users.id, matchedSession.userId)).limit(1);
-    
+    const userArr = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, matchedSession.userId))
+      .limit(1);
+
     const accessToken = jwt.sign(
-      { sub: matchedSession.userId, roles: userArr[0]?.roles, session_id: sessionId },
+      {
+        sub: matchedSession.userId,
+        roles: userArr[0]?.roles,
+        session_id: sessionId,
+      },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN as any }
+      { expiresIn: JWT_EXPIRES_IN as any },
     );
 
     return {
       accessToken,
-      refreshToken: newRefreshToken
+      refreshToken: newRefreshToken,
     };
   }
 
   async logout(sessionId: string) {
-    await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, sessionId));
+    await db
+      .update(sessions)
+      .set({ revokedAt: new Date() })
+      .where(eq(sessions.id, sessionId));
   }
 
   async logoutAll(userId: string) {
-    await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.userId, userId));
+    await db
+      .update(sessions)
+      .set({ revokedAt: new Date() })
+      .where(eq(sessions.userId, userId));
   }
 }

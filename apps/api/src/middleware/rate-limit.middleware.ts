@@ -19,20 +19,24 @@ redis.call('EXPIRE', key, window)
 return count + 1
 `;
 
-export function createRateLimiter(options: { limit: number; windowSeconds: number; keyFn: (request: FastifyRequest) => string }) {
+export function createRateLimiter(options: {
+  limit: number;
+  windowSeconds: number;
+  keyFn: (request: FastifyRequest) => string;
+}) {
   return async (request: FastifyRequest) => {
     const key = `rate_limit:${options.keyFn(request)}`;
     const now = Date.now();
-    
+
     // We use eval because redisConnection evaluates Lua script directly
-    const count = await redisConnection.eval(
+    const count = (await redisConnection.eval(
       SLIDING_WINDOW_SCRIPT,
       1,
       key,
       now,
       options.windowSeconds * 1000, // ARGV in ms
-      options.limit
-    ) as number;
+      options.limit,
+    )) as number;
 
     if (count === -1) {
       throw new RateLimitError(options.windowSeconds);
@@ -43,17 +47,17 @@ export function createRateLimiter(options: { limit: number; windowSeconds: numbe
 export const authLimiter = createRateLimiter({
   limit: 10,
   windowSeconds: 60,
-  keyFn: (request) => `auth:${request.ip}`
+  keyFn: (request) => `auth:${request.ip}`,
 });
 
 export const writeLimiter = createRateLimiter({
   limit: 60,
   windowSeconds: 60,
-  keyFn: (request) => `write:${request.user?.userId || request.ip}`
+  keyFn: (request) => `write:${request.user?.userId || request.ip}`,
 });
 
 export const readLimiter = createRateLimiter({
   limit: 300,
   windowSeconds: 60,
-  keyFn: (request) => `read:${request.user?.userId || request.ip}`
+  keyFn: (request) => `read:${request.user?.userId || request.ip}`,
 });

@@ -7,10 +7,10 @@ const files = [
   'apps/api/src/modules/auth/auth.service.ts',
   'apps/api/src/modules/identity/identity.service.ts',
   'apps/api/src/modules/social/social.service.ts',
-  'apps/api/src/modules/wallet/wallet.service.ts'
+  'apps/api/src/modules/wallet/wallet.service.ts',
 ];
 
-for(const file of files) {
+for (const file of files) {
   const fullPath = path.join(__dirname, file);
   if (!fs.existsSync(fullPath)) continue;
   let text = fs.readFileSync(fullPath, 'utf8');
@@ -18,4 +18,4 @@ for(const file of files) {
   text = text.replace(/\\\$/g, '$');
   fs.writeFileSync(fullPath, text);
 }
-console.log("Fixed template literals");
+console.log('Fixed template literals');

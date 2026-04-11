@@ -16,29 +16,37 @@ async function flushBatch() {
   const currentBatch = [...batch];
   batch = [];
   try {
-     await db.insert(analyticsEvents).values(currentBatch);
-     logger.info(`Inserted ${currentBatch.length} analytics events`);
+    await db.insert(analyticsEvents).values(currentBatch);
+    logger.info(`Inserted ${currentBatch.length} analytics events`);
   } catch (error) {
-     // Failure drops mapping effectively minimizing thread blocks during scale events seamlessly!
-     logger.error({ error }, 'Failed to insert analytics events batch');
+    // Failure drops mapping effectively minimizing thread blocks during scale events seamlessly!
+    logger.error({ error }, 'Failed to insert analytics events batch');
   }
 }
 
-export const analyticsIngestWorker = new Worker('analytics:ingest', async (job: Job) => {
-  const payload = job.data;
-  batch.push(payload);
-  
-  if (batch.length >= MAX_BATCH_SIZE) {
-     if (batchTimeout) clearTimeout(batchTimeout);
-     batchTimeout = null;
-     await flushBatch();
-  } else if (!batchTimeout) {
-     batchTimeout = setTimeout(flushBatch, BATCH_INTERVAL);
-  }
-}, { connection: redisConnection });
+export const analyticsIngestWorker = new Worker(
+  'analytics:ingest',
+  async (job: Job) => {
+    const payload = job.data;
+    batch.push(payload);
 
-export const trendingComputeWorker = new Worker('trending:compute', async (job: Job) => {
-    logger.info('Commencing global Wilson scaling models generating platform metrics.');
+    if (batch.length >= MAX_BATCH_SIZE) {
+      if (batchTimeout) clearTimeout(batchTimeout);
+      batchTimeout = null;
+      await flushBatch();
+    } else if (!batchTimeout) {
+      batchTimeout = setTimeout(flushBatch, BATCH_INTERVAL);
+    }
+  },
+  { connection: redisConnection },
+);
+
+export const trendingComputeWorker = new Worker(
+  'trending:compute',
+  async (job: Job) => {
+    logger.info(
+      'Commencing global Wilson scaling models generating platform metrics.',
+    );
     const query = sql`
       WITH recent_posts as (
          SELECT p.id, p.created_at
@@ -79,10 +87,13 @@ export const trendingComputeWorker = new Worker('trending:compute', async (job: 
     `;
     await db.execute(query);
     logger.info('Wilson scaling completed flawlessly.');
-}, { connection: redisConnection });
+  },
+  { connection: redisConnection },
+);
 
-
-export const analyticsRollupWorker = new Worker('analytics:rollup', async () => {
+export const analyticsRollupWorker = new Worker(
+  'analytics:rollup',
+  async () => {
     logger.info('Rolling up hourly app analytics natively');
     const query = sql`
        WITH app_metrics as (
@@ -100,4 +111,6 @@ export const analyticsRollupWorker = new Worker('analytics:rollup', async () => 
           api_calls = EXCLUDED.api_calls;
     `;
     await db.execute(query);
-}, { connection: redisConnection });
+  },
+  { connection: redisConnection },
+);

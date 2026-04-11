@@ -17,7 +17,7 @@ export async function authRoutes(app: FastifyInstance) {
         }),
       },
     },
-    controller.generateNonce as any
+    controller.generateNonce as any,
   );
 
   server.post(
@@ -31,19 +31,21 @@ export async function authRoutes(app: FastifyInstance) {
         }),
       },
     },
-    controller.verifyWallet as any
+    controller.verifyWallet as any,
   );
 
   server.post(
     '/refresh',
     {
       schema: {
-        body: z.object({
-          refreshToken: z.string().optional(),
-        }).optional(),
+        body: z
+          .object({
+            refreshToken: z.string().optional(),
+          })
+          .optional(),
       },
     },
-    controller.refresh as any
+    controller.refresh as any,
   );
 
   server.post(
@@ -51,7 +53,7 @@ export async function authRoutes(app: FastifyInstance) {
     {
       preHandler: [authenticateRequest],
     },
-    controller.logout as any
+    controller.logout as any,
   );
 
   server.post(
@@ -59,6 +61,6 @@ export async function authRoutes(app: FastifyInstance) {
     {
       preHandler: [authenticateRequest],
     },
-    controller.logoutAll as any
+    controller.logoutAll as any,
   );
 }

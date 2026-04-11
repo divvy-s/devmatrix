@@ -5,7 +5,10 @@ import { UnauthorizedError, ForbiddenError } from '@workspace/errors';
 import crypto from 'crypto';
 import { authenticateRequest } from './auth.middleware';
 
-export const authenticateAppToken = async (request: FastifyRequest, reply: FastifyReply) => {
+export const authenticateAppToken = async (
+  request: FastifyRequest,
+  reply: FastifyReply,
+) => {
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new UnauthorizedError('missing_token');
@@ -24,13 +27,17 @@ export const authenticateAppToken = async (request: FastifyRequest, reply: Fasti
 
   const hash = crypto.createHash('sha256').update(token).digest('hex');
 
-  const tokenArr = await db.select().from(appTokens).where(
-    and(
-      eq(appTokens.tokenHash, hash),
-      isNull(appTokens.revokedAt),
-      or(isNull(appTokens.expiresAt), gt(appTokens.expiresAt, new Date()))
+  const tokenArr = await db
+    .select()
+    .from(appTokens)
+    .where(
+      and(
+        eq(appTokens.tokenHash, hash),
+        isNull(appTokens.revokedAt),
+        or(isNull(appTokens.expiresAt), gt(appTokens.expiresAt, new Date())),
+      ),
     )
-  ).limit(1);
+    .limit(1);
 
   const appToken = tokenArr[0];
   if (!appToken) {
@@ -41,13 +48,16 @@ export const authenticateAppToken = async (request: FastifyRequest, reply: Fasti
   request.user = {
     userId: appToken.userId,
     roles: [],
-    sessionId: 'app_token' as any
+    sessionId: 'app_token' as any,
   };
   (request as any).appId = appToken.appId;
   (request as any).scopes = appToken.scopes;
   (request as any).isAppToken = true;
 
-  db.update(appTokens).set({ lastUsedAt: new Date() }).where(eq(appTokens.id, appToken.id)).catch(() => {});
+  db.update(appTokens)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(appTokens.id, appToken.id))
+    .catch(() => {});
 };
 
 export const requireAppScope = (scope: string) => {

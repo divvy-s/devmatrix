@@ -1,17 +1,31 @@
 const fs = require('fs');
 
-let devService = fs.readFileSync('apps/api/src/modules/developers/developers.service.ts', 'utf8');
+let devService = fs.readFileSync(
+  'apps/api/src/modules/developers/developers.service.ts',
+  'utf8',
+);
 devService = devService.replace(
   /import \{ appAnalyticsRollups[\s\S]*?import \{ createLogger \} from '@workspace\/logger';/m,
-  "import { db, developers, users, appAnalyticsRollups, analyticsEvents, apps } from '@workspace/db';\nimport { eq, and, gte } from 'drizzle-orm';\nimport { NotFoundError, BusinessError } from '@workspace/errors';\nimport { createLogger } from '@workspace/logger';"
+  "import { db, developers, users, appAnalyticsRollups, analyticsEvents, apps } from '@workspace/db';\nimport { eq, and, gte } from 'drizzle-orm';\nimport { NotFoundError, BusinessError } from '@workspace/errors';\nimport { createLogger } from '@workspace/logger';",
 );
-devService = devService.replace(/rows\.map\(r =>/g, "rows.map((r: any) =>");
-devService = devService.replace(/events\.forEach\(e =>/g, "events.forEach((e: any) =>");
-fs.writeFileSync('apps/api/src/modules/developers/developers.service.ts', devService);
+devService = devService.replace(/rows\.map\(r =>/g, 'rows.map((r: any) =>');
+devService = devService.replace(
+  /events\.forEach\(e =>/g,
+  'events.forEach((e: any) =>',
+);
+fs.writeFileSync(
+  'apps/api/src/modules/developers/developers.service.ts',
+  devService,
+);
 
-let devCtrl = fs.readFileSync('apps/api/src/modules/developers/developers.controller.ts', 'utf8');
+let devCtrl = fs.readFileSync(
+  'apps/api/src/modules/developers/developers.controller.ts',
+  'utf8',
+);
 if (!devCtrl.includes('getAppAnalytics =')) {
-   devCtrl = devCtrl.replace(/}\s*$/, `
+  devCtrl = devCtrl.replace(
+    /}\s*$/,
+    `
   getAppAnalytics = async (request: FastifyRequest<{ Params: { appId: string } }>, reply: FastifyReply) => {
      const q = request.query as any;
      const result = await this.service.getAppAnalytics(request.user!.userId, request.params.appId, q.period, q.from, q.to);
@@ -23,17 +37,24 @@ if (!devCtrl.includes('getAppAnalytics =')) {
      return reply.send(result);
   };
 }
-`);
-   fs.writeFileSync('apps/api/src/modules/developers/developers.controller.ts', devCtrl);
+`,
+  );
+  fs.writeFileSync(
+    'apps/api/src/modules/developers/developers.controller.ts',
+    devCtrl,
+  );
 }
 
-let adminService = fs.readFileSync('apps/api/src/modules/admin/admin.service.ts', 'utf8');
+let adminService = fs.readFileSync(
+  'apps/api/src/modules/admin/admin.service.ts',
+  'utf8',
+);
 if (!adminService.includes('listFeatureFlags')) {
-   adminService = adminService.replace(
-      "import { db, apps, appVersions, webhookSubscriptions, appTokens, developers } from '@workspace/db';",
-      "import { db, apps, appVersions, webhookSubscriptions, appTokens, developers, featureFlags } from '@workspace/db';\nimport { redisConnection } from '@workspace/queue';"
-   );
-   const admMethods = `
+  adminService = adminService.replace(
+    "import { db, apps, appVersions, webhookSubscriptions, appTokens, developers } from '@workspace/db';",
+    "import { db, apps, appVersions, webhookSubscriptions, appTokens, developers, featureFlags } from '@workspace/db';\nimport { redisConnection } from '@workspace/queue';",
+  );
+  const admMethods = `
   async listFeatureFlags() {
      return await db.select().from(featureFlags).orderBy(featureFlags.createdAt);
   }
@@ -69,13 +90,17 @@ if (!adminService.includes('listFeatureFlags')) {
   }
 }
 `;
-   adminService = adminService.substring(0, adminService.lastIndexOf('}')) + admMethods;
-   fs.writeFileSync('apps/api/src/modules/admin/admin.service.ts', adminService);
+  adminService =
+    adminService.substring(0, adminService.lastIndexOf('}')) + admMethods;
+  fs.writeFileSync('apps/api/src/modules/admin/admin.service.ts', adminService);
 }
 
-let adminRoutes = fs.readFileSync('apps/api/src/modules/admin/admin.routes.ts', 'utf8');
+let adminRoutes = fs.readFileSync(
+  'apps/api/src/modules/admin/admin.routes.ts',
+  'utf8',
+);
 if (!adminRoutes.includes('/feature-flags')) {
-   const admRoutesMethods = `
+  const admRoutesMethods = `
   app.get('/feature-flags', { preHandler: [authenticateRequest, requireRole('admin')] }, async (req, rep) => {
      return rep.send(await service.listFeatureFlags());
   });
@@ -87,7 +112,8 @@ if (!adminRoutes.includes('/feature-flags')) {
   });
 }
 `;
-   adminRoutes = adminRoutes.substring(0, adminRoutes.lastIndexOf('}')) + admRoutesMethods;
-   fs.writeFileSync('apps/api/src/modules/admin/admin.routes.ts', adminRoutes);
+  adminRoutes =
+    adminRoutes.substring(0, adminRoutes.lastIndexOf('}')) + admRoutesMethods;
+  fs.writeFileSync('apps/api/src/modules/admin/admin.routes.ts', adminRoutes);
 }
 console.log('Appended successfully');

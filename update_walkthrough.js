@@ -1,5 +1,8 @@
 const fs = require('fs');
-let w = fs.readFileSync('/home/divvy/.gemini/antigravity/brain/88c58d94-8439-46b2-be78-1e2caf759aad/walkthrough.md', 'utf8');
+let w = fs.readFileSync(
+  '/home/divvy/.gemini/antigravity/brain/88c58d94-8439-46b2-be78-1e2caf759aad/walkthrough.md',
+  'utf8',
+);
 
 const p4 = `
 ## Phase 4: Moderation, Analytics, and Feature Flags
@@ -20,5 +23,8 @@ The platform now features a highly resilient analytics infrastructure coupled ti
 - Developed the \`isFeatureEnabled\` API resolving Redis-backed states locally within 30s TTL validations allowing transparent traffic shifting based on role and randomized percentage gating constraints seamlessly!
 `;
 if (!w.includes('Analytics Event Ingestions')) {
-   fs.writeFileSync('/home/divvy/.gemini/antigravity/brain/88c58d94-8439-46b2-be78-1e2caf759aad/walkthrough.md', w + '\n' + p4);
+  fs.writeFileSync(
+    '/home/divvy/.gemini/antigravity/brain/88c58d94-8439-46b2-be78-1e2caf759aad/walkthrough.md',
+    w + '\n' + p4,
+  );
 }

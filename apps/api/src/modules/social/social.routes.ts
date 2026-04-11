@@ -16,32 +16,64 @@ export async function socialRoutes(app: FastifyInstance) {
     }
   };
 
-  server.post('/:username/follow', { preHandler: [authenticateRequest] }, controller.follow as any);
-  server.delete('/:username/follow', { preHandler: [authenticateRequest] }, controller.unfollow as any);
+  server.post(
+    '/:username/follow',
+    { preHandler: [authenticateRequest] },
+    controller.follow as any,
+  );
+  server.delete(
+    '/:username/follow',
+    { preHandler: [authenticateRequest] },
+    controller.unfollow as any,
+  );
 
   server.get(
     '/:username/followers',
     {
       preHandler: [optionalAuth],
-      schema: { querystring: z.object({ cursor: z.string().optional() }) }
+      schema: { querystring: z.object({ cursor: z.string().optional() }) },
     },
-    controller.getFollowers as any
+    controller.getFollowers as any,
   );
 
   server.get(
     '/:username/following',
     {
       preHandler: [optionalAuth],
-      schema: { querystring: z.object({ cursor: z.string().optional() }) }
+      schema: { querystring: z.object({ cursor: z.string().optional() }) },
     },
-    controller.getFollowing as any
+    controller.getFollowing as any,
   );
 
-  server.post('/:username/block', { preHandler: [authenticateRequest] }, controller.block as any);
-  server.delete('/:username/block', { preHandler: [authenticateRequest] }, controller.unblock as any);
-  server.post('/:username/mute', { preHandler: [authenticateRequest] }, controller.mute as any);
-  server.delete('/:username/mute', { preHandler: [authenticateRequest] }, controller.unmute as any);
+  server.post(
+    '/:username/block',
+    { preHandler: [authenticateRequest] },
+    controller.block as any,
+  );
+  server.delete(
+    '/:username/block',
+    { preHandler: [authenticateRequest] },
+    controller.unblock as any,
+  );
+  server.post(
+    '/:username/mute',
+    { preHandler: [authenticateRequest] },
+    controller.mute as any,
+  );
+  server.delete(
+    '/:username/mute',
+    { preHandler: [authenticateRequest] },
+    controller.unmute as any,
+  );
 
-  server.get('/me/blocks', { preHandler: [authenticateRequest] }, controller.getBlocks as any);
-  server.get('/me/mutes', { preHandler: [authenticateRequest] }, controller.getMutes as any);
+  server.get(
+    '/me/blocks',
+    { preHandler: [authenticateRequest] },
+    controller.getBlocks as any,
+  );
+  server.get(
+    '/me/mutes',
+    { preHandler: [authenticateRequest] },
+    controller.getMutes as any,
+  );
 }

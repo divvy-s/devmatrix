@@ -6,14 +6,14 @@ describe('App E2E Integration setup', () => {
     const app = await buildApp();
     const response = await app.inject({
       method: 'GET',
-      url: '/health'
+      url: '/health',
     });
 
-    // We verify the endpoint structure. Since DB/Redis might fail during isolated test run, 
+    // We verify the endpoint structure. Since DB/Redis might fail during isolated test run,
     // it could return 503 instead of 200, so we check status property
     const body = JSON.parse(response.payload);
     expect(body.timestamp).toBeDefined();
-    
+
     await app.close();
   });
 });

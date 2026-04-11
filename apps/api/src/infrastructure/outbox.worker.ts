@@ -1,12 +1,24 @@
 import { webhookQueue } from '@workspace/queue';
 import { v4 as uuidv4 } from 'uuid';
 import { and } from 'drizzle-orm';
-import { db, outboxEvents, notifications, notificationPreferences, users, posts, webhookDeliveries, webhookSubscriptions, apps } from '@workspace/db';
+import {
+  db,
+  outboxEvents,
+  notifications,
+  notificationPreferences,
+  users,
+  posts,
+  webhookDeliveries,
+  webhookSubscriptions,
+  apps,
+} from '@workspace/db';
 import { sql, eq } from 'drizzle-orm';
 import { createLogger } from '@workspace/logger';
 
 const logger = createLogger('outbox-worker');
-const POLL_INTERVAL = process.env.OUTBOX_POLL_INTERVAL_MS ? parseInt(process.env.OUTBOX_POLL_INTERVAL_MS) : 1000;
+const POLL_INTERVAL = process.env.OUTBOX_POLL_INTERVAL_MS
+  ? parseInt(process.env.OUTBOX_POLL_INTERVAL_MS)
+  : 1000;
 
 export class OutboxWorker {
   private intervalId?: NodeJS.Timeout;
@@ -15,10 +27,17 @@ export class OutboxWorker {
   private consumers: Record<string, (payload: any) => Promise<void>> = {
     'user.followed': async (payload) => {
       const { followerId, followingId } = payload;
-      const prefArr = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, followingId)).limit(1);
+      const prefArr = await db
+        .select()
+        .from(notificationPreferences)
+        .where(eq(notificationPreferences.userId, followingId))
+        .limit(1);
       let pref = prefArr[0];
       if (!pref) {
-        await db.insert(notificationPreferences).values({ userId: followingId }).onConflictDoNothing();
+        await db
+          .insert(notificationPreferences)
+          .values({ userId: followingId })
+          .onConflictDoNothing();
         pref = { notifyOnFollow: true } as any;
       }
       if (pref?.notifyOnFollow) {
@@ -27,39 +46,55 @@ export class OutboxWorker {
           actorId: followerId,
           type: 'follow',
           resourceType: 'user',
-          resourceId: followerId
+          resourceId: followerId,
         });
       }
     },
     'post.liked': async (payload) => {
       const { userId, postId } = payload;
-      const postArr = await db.select({ authorId: posts.authorId }).from(posts).where(eq(posts.id, postId)).limit(1);
+      const postArr = await db
+        .select({ authorId: posts.authorId })
+        .from(posts)
+        .where(eq(posts.id, postId))
+        .limit(1);
       const post = postArr[0];
       if (!post || post.authorId === userId) return;
-      const prefArr = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, post.authorId)).limit(1);
+      const prefArr = await db
+        .select()
+        .from(notificationPreferences)
+        .where(eq(notificationPreferences.userId, post.authorId))
+        .limit(1);
       if (prefArr[0] === undefined || prefArr[0].notifyOnLike) {
         await db.insert(notifications).values({
           recipientId: post.authorId,
           actorId: userId,
           type: 'like',
           resourceType: 'post',
-          resourceId: postId
+          resourceId: postId,
         });
       }
     },
     'post.created': async (payload) => {
       const { post } = payload;
       if (post.postType === 'reply') {
-        const parentArr = await db.select({ authorId: posts.authorId }).from(posts).where(eq(posts.id, post.parentId)).limit(1);
+        const parentArr = await db
+          .select({ authorId: posts.authorId })
+          .from(posts)
+          .where(eq(posts.id, post.parentId))
+          .limit(1);
         if (parentArr[0] && parentArr[0].authorId !== post.authorId) {
-          const prefArr = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, parentArr[0].authorId)).limit(1);
+          const prefArr = await db
+            .select()
+            .from(notificationPreferences)
+            .where(eq(notificationPreferences.userId, parentArr[0].authorId))
+            .limit(1);
           if (prefArr[0] === undefined || prefArr[0].notifyOnReply) {
             await db.insert(notifications).values({
               recipientId: parentArr[0].authorId,
               actorId: post.authorId,
               type: 'reply',
               resourceType: 'post',
-              resourceId: post.id
+              resourceId: post.id,
             });
           }
         }
@@ -67,26 +102,41 @@ export class OutboxWorker {
     },
     'post.reposted': async (payload) => {
       const { userId, postId } = payload;
-      const postArr = await db.select({ authorId: posts.authorId }).from(posts).where(eq(posts.id, postId)).limit(1);
+      const postArr = await db
+        .select({ authorId: posts.authorId })
+        .from(posts)
+        .where(eq(posts.id, postId))
+        .limit(1);
       if (!postArr[0] || postArr[0].authorId === userId) return;
-      const prefArr = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, postArr[0].authorId)).limit(1);
+      const prefArr = await db
+        .select()
+        .from(notificationPreferences)
+        .where(eq(notificationPreferences.userId, postArr[0].authorId))
+        .limit(1);
       if (prefArr[0] === undefined || prefArr[0].notifyOnRepost) {
         await db.insert(notifications).values({
           recipientId: postArr[0].authorId,
           actorId: userId,
           type: 'repost',
           resourceType: 'post',
-          resourceId: postId
+          resourceId: postId,
         });
       }
     },
   };
 
-  
   private async dispatchWebhooks(event: typeof outboxEvents.$inferSelect) {
-    const subscriptions = await db.select().from(webhookSubscriptions)
+    const subscriptions = await db
+      .select()
+      .from(webhookSubscriptions)
       .innerJoin(apps, eq(webhookSubscriptions.appId, apps.id))
-      .where(and(eq(webhookSubscriptions.eventType, event.type), eq(webhookSubscriptions.active, true), eq(apps.status, 'approved')));
+      .where(
+        and(
+          eq(webhookSubscriptions.eventType, event.type),
+          eq(webhookSubscriptions.active, true),
+          eq(apps.status, 'approved'),
+        ),
+      );
 
     for (const row of subscriptions) {
       const deliveryId = uuidv4();
@@ -95,7 +145,7 @@ export class OutboxWorker {
         event_type: event.type,
         event_id: event.id,
         occurred_at: event.createdAt,
-        payload: event.payload
+        payload: event.payload,
       };
 
       await db.insert(webhookDeliveries).values({
@@ -103,7 +153,7 @@ export class OutboxWorker {
         subscriptionId: row.webhook_subscriptions.id,
         eventId: event.id,
         payload: payloadObj,
-        status: 'pending'
+        status: 'pending',
       });
 
       await webhookQueue.add('webhook:deliver', { deliveryId });
@@ -129,7 +179,7 @@ export class OutboxWorker {
     this.isProcessing = true;
 
     try {
-      // Drizzle ORM does not natively support Postgres SKIP LOCKED dynamically easily, 
+      // Drizzle ORM does not natively support Postgres SKIP LOCKED dynamically easily,
       // so we use execute directly
       const result = await db.execute(sql`
         SELECT * FROM outbox_events 
@@ -138,7 +188,7 @@ export class OutboxWorker {
         FOR UPDATE SKIP LOCKED
       `);
 
-      const events = result as unknown as typeof outboxEvents.$inferSelect[];
+      const events = result as unknown as (typeof outboxEvents.$inferSelect)[];
 
       for (const event of events) {
         await this.processEvent(event);
@@ -165,24 +215,34 @@ export class OutboxWorker {
       if (consumer) {
         await consumer(event.payload);
       } else {
-        logger.warn({ type: event.type }, 'No consumer registered for outbox event type');
+        logger.warn(
+          { type: event.type },
+          'No consumer registered for outbox event type',
+        );
       }
 
-      await db.update(outboxEvents)
+      await db
+        .update(outboxEvents)
         .set({
           status: 'delivered',
           deliveredAt: new Date(),
         })
         .where(eq(outboxEvents.id, event.id));
-        
-      logger.debug({ eventId: event.id }, 'Successfully delivered outbox event');
+
+      logger.debug(
+        { eventId: event.id },
+        'Successfully delivered outbox event',
+      );
     } catch (err) {
       const newAttempts = event.attempts + 1;
       const errorMessage = err instanceof Error ? err.message : String(err);
-      
+
       if (newAttempts < 10) {
-        const nextDeliverAt = new Date(Date.now() + backoff(newAttempts) * 1000);
-        await db.update(outboxEvents)
+        const nextDeliverAt = new Date(
+          Date.now() + backoff(newAttempts) * 1000,
+        );
+        await db
+          .update(outboxEvents)
           .set({
             attempts: newAttempts,
             lastError: errorMessage,
@@ -190,14 +250,15 @@ export class OutboxWorker {
           })
           .where(eq(outboxEvents.id, event.id));
       } else {
-        await db.update(outboxEvents)
+        await db
+          .update(outboxEvents)
           .set({
             status: 'dead',
             attempts: newAttempts,
             lastError: errorMessage,
           })
           .where(eq(outboxEvents.id, event.id));
-          
+
         logger.error({ eventId: event.id, err }, 'Outbox event dead-lettered');
       }
     }

@@ -1,12 +1,15 @@
 const fs = require('fs');
 
-let adminService = fs.readFileSync('apps/api/src/modules/admin/admin.service.ts', 'utf8');
+let adminService = fs.readFileSync(
+  'apps/api/src/modules/admin/admin.service.ts',
+  'utf8',
+);
 if (!adminService.includes('featureFlags')) {
-   adminService = adminService.replace(
-      "import { db, apps, appVersions, webhookSubscriptions, appTokens, developers } from '@workspace/db';",
-      "import { db, apps, appVersions, webhookSubscriptions, appTokens, developers, featureFlags } from '@workspace/db';\nimport { redisConnection } from '@workspace/queue';"
-   );
-   const methods = `
+  adminService = adminService.replace(
+    "import { db, apps, appVersions, webhookSubscriptions, appTokens, developers } from '@workspace/db';",
+    "import { db, apps, appVersions, webhookSubscriptions, appTokens, developers, featureFlags } from '@workspace/db';\nimport { redisConnection } from '@workspace/queue';",
+  );
+  const methods = `
   async listFeatureFlags() {
      return await db.select().from(featureFlags).orderBy(featureFlags.createdAt);
   }
@@ -42,13 +45,17 @@ if (!adminService.includes('featureFlags')) {
   }
 }
 `;
-   adminService = adminService.substring(0, adminService.lastIndexOf('}')) + methods;
-   fs.writeFileSync('apps/api/src/modules/admin/admin.service.ts', adminService);
+  adminService =
+    adminService.substring(0, adminService.lastIndexOf('}')) + methods;
+  fs.writeFileSync('apps/api/src/modules/admin/admin.service.ts', adminService);
 }
 
-let adminCtrl = fs.readFileSync('apps/api/src/modules/admin/admin.controller.ts', 'utf8');
+let adminCtrl = fs.readFileSync(
+  'apps/api/src/modules/admin/admin.controller.ts',
+  'utf8',
+);
 if (!adminCtrl.includes('listFeatureFlags')) {
-   const ctrlMethods = `
+  const ctrlMethods = `
   listFeatureFlags = async (request: FastifyRequest, reply: FastifyReply) => {
      const result = await this.service.listFeatureFlags();
      return reply.send(result);
@@ -65,19 +72,23 @@ if (!adminCtrl.includes('listFeatureFlags')) {
   };
 }
 `;
-   adminCtrl = adminCtrl.substring(0, adminCtrl.lastIndexOf('}')) + ctrlMethods;
-   fs.writeFileSync('apps/api/src/modules/admin/admin.controller.ts', adminCtrl);
+  adminCtrl = adminCtrl.substring(0, adminCtrl.lastIndexOf('}')) + ctrlMethods;
+  fs.writeFileSync('apps/api/src/modules/admin/admin.controller.ts', adminCtrl);
 }
 
-let adminRoutes = fs.readFileSync('apps/api/src/modules/admin/admin.routes.ts', 'utf8');
+let adminRoutes = fs.readFileSync(
+  'apps/api/src/modules/admin/admin.routes.ts',
+  'utf8',
+);
 if (!adminRoutes.includes('/feature-flags')) {
-   const routeMethods = `
+  const routeMethods = `
   app.get('/feature-flags', { preHandler: [authenticateRequest, requireRole('admin')] }, controller.listFeatureFlags as any);
   app.post('/feature-flags', { preHandler: [authenticateRequest, requireRole('admin')] }, controller.createFeatureFlag as any);
   app.patch('/feature-flags/:name', { preHandler: [authenticateRequest, requireRole('admin')] }, controller.updateFeatureFlag as any);
 }
 `;
-   adminRoutes = adminRoutes.substring(0, adminRoutes.lastIndexOf('}')) + routeMethods;
-   fs.writeFileSync('apps/api/src/modules/admin/admin.routes.ts', adminRoutes);
+  adminRoutes =
+    adminRoutes.substring(0, adminRoutes.lastIndexOf('}')) + routeMethods;
+  fs.writeFileSync('apps/api/src/modules/admin/admin.routes.ts', adminRoutes);
 }
 console.log('Appended feature flags configurations accurately!');

@@ -17,8 +17,14 @@ export class MediaController {
     }
 
     const { filename, mimetype, file } = data;
-    
-    const validMimetypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4'];
+
+    const validMimetypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'video/mp4',
+    ];
     if (!validMimetypes.includes(mimetype)) {
       return reply.status(400).send({ error: 'Invalid file type' });
     }
@@ -35,15 +41,17 @@ export class MediaController {
           Key: storageKey,
           Body: file,
           ContentType: mimetype,
-        })
+        }),
       );
     } catch (err: any) {
-      return reply.status(500).send({ error: 'Upload failed', details: err.message });
+      return reply
+        .status(500)
+        .send({ error: 'Upload failed', details: err.message });
     }
 
     // Derive rough byte length read after stream finishes
     const sizeBytes = (file as any).bytesRead || 1024; // fallback safe
-    
+
     if (mimetype.startsWith('image/') && sizeBytes > 10 * 1024 * 1024) {
       return reply.status(400).send({ error: 'Image exceeds 10MB limit' });
     }
@@ -57,7 +65,7 @@ export class MediaController {
       storageKey,
       mediaType: mimetype,
       sizeBytes,
-      status: 'pending'
+      status: 'pending',
     });
 
     await mediaQueue.add('media:process', { mediaId: id });
@@ -65,7 +73,7 @@ export class MediaController {
     return reply.status(201).send({
       id,
       url,
-      status: 'pending'
+      status: 'pending',
     });
-  }
+  };
 }

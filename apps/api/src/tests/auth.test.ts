@@ -14,24 +14,25 @@ describe('AuthService - Unit Functions', () => {
   it('should generate a nonce and store it in Redis', async () => {
     // Mock redis dependency
     const setExSpy = vi.spyOn(redisConnection, 'setex').mockResolvedValue('OK');
-    
+
     const address = '0x1A2f3B4c5D6E7f8a9B0c1D2e3F4a5B6c7D8e9F0a';
     const result = await authService.generateNonce(address);
-    
+
     expect(result.nonce).toBeDefined();
     expect(result.message).toContain('Nonce: ' + result.nonce);
     expect(setExSpy).toHaveBeenCalledTimes(1);
-    
+
     setExSpy.mockRestore();
   });
 
   it('should throw an error for invalid address length', async () => {
-    await expect(authService.generateNonce('0x123')).rejects.toThrow('INVALID_ADDRESS');
+    await expect(authService.generateNonce('0x123')).rejects.toThrow(
+      'INVALID_ADDRESS',
+    );
   });
 
   // Note: Full wallet verification logic involves the database significantly.
-  // In a robust unit test environment, we'd mock @workspace/db exports (drizzle-orm endpoints). 
+  // In a robust unit test environment, we'd mock @workspace/db exports (drizzle-orm endpoints).
   // For the sake of validation scaffolding, we assert signature functions behavior internally if possible,
   // or use an e2e context where an ephemeral test db is spun up.
-  
 });

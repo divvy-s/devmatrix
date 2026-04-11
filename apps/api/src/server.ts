@@ -9,7 +9,7 @@ const start = async () => {
   try {
     const app = await buildApp();
     const port = parseInt(process.env.PORT || '3000', 10);
-    
+
     if (process.env.NODE_ENV !== 'test') {
       outboxWorker.start();
     }

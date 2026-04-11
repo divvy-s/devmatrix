@@ -3,7 +3,10 @@ const fs = require('fs');
 let schema = fs.readFileSync('packages/db/src/schema.ts', 'utf8');
 
 // 1. Append imports: add numeric
-schema = schema.replace(/integer,\n\s*index,\n\s*uniqueIndex,\n\s*check,\n\s*primaryKey,/g, "integer,\n  index,\n  uniqueIndex,\n  check,\n  primaryKey,\n  numeric,");
+schema = schema.replace(
+  /integer,\n\s*index,\n\s*uniqueIndex,\n\s*check,\n\s*primaryKey,/g,
+  'integer,\n  index,\n  uniqueIndex,\n  check,\n  primaryKey,\n  numeric,',
+);
 
 // 2. Append Phase 3 tables
 const phase3 = `

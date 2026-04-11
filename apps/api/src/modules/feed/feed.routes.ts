@@ -21,10 +21,10 @@ export async function feedRoutes(app: FastifyInstance) {
     {
       preHandler: [authenticateRequest],
       schema: {
-        querystring: z.object({ cursor: z.string().optional() })
-      }
+        querystring: z.object({ cursor: z.string().optional() }),
+      },
     },
-    controller.getFollowingFeed as any
+    controller.getFollowingFeed as any,
   );
 
   server.get(
@@ -33,10 +33,10 @@ export async function feedRoutes(app: FastifyInstance) {
       preHandler: [optionalAuth],
       schema: {
         params: z.object({ username: z.string().min(1) }),
-        querystring: z.object({ cursor: z.string().optional() })
-      }
+        querystring: z.object({ cursor: z.string().optional() }),
+      },
     },
-    controller.getUserFeed as any
+    controller.getUserFeed as any,
   );
 
   server.get(
@@ -45,10 +45,10 @@ export async function feedRoutes(app: FastifyInstance) {
       preHandler: [optionalAuth],
       schema: {
         params: z.object({ postId: z.string().uuid() }),
-        querystring: z.object({ cursor: z.string().optional() })
-      }
+        querystring: z.object({ cursor: z.string().optional() }),
+      },
     },
-    controller.getReplies as any
+    controller.getReplies as any,
   );
 
   app.get('/discovery', controller.getDiscoveryFeed as any);

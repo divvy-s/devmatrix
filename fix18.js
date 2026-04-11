@@ -3,12 +3,12 @@ const fs = require('fs');
 let feed = fs.readFileSync('apps/api/src/modules/feed/feed.service.ts', 'utf8');
 
 if (!feed.includes('trendingScores')) {
-   feed = feed.replace(
-     "import { db, posts, users, userProfiles, follows, blocks, postLikes, postBookmarks, postReposts } from '@workspace/db';",
-     "import { db, posts, users, userProfiles, follows, blocks, postLikes, postBookmarks, postReposts, trendingScores, apps } from '@workspace/db';"
-   );
-   // Wait! Before replacing the end `}`, let's replace `}\n` at the end
-   const newMethods = `
+  feed = feed.replace(
+    "import { db, posts, users, userProfiles, follows, blocks, postLikes, postBookmarks, postReposts } from '@workspace/db';",
+    "import { db, posts, users, userProfiles, follows, blocks, postLikes, postBookmarks, postReposts, trendingScores, apps } from '@workspace/db';",
+  );
+  // Wait! Before replacing the end `}`, let's replace `}\n` at the end
+  const newMethods = `
   async getDiscoveryFeed(viewerId?: string, cursor?: number) {
      const page = cursor || 0;
      const cacheKey = \`feed:discovery:\${page}\`;
@@ -101,7 +101,7 @@ if (!feed.includes('trendingScores')) {
   }
 }
 `;
-   feed = feed.substring(0, feed.lastIndexOf('}')) + newMethods;
-   fs.writeFileSync('apps/api/src/modules/feed/feed.service.ts', feed);
-   console.log('Appended discovery feed properly');
+  feed = feed.substring(0, feed.lastIndexOf('}')) + newMethods;
+  fs.writeFileSync('apps/api/src/modules/feed/feed.service.ts', feed);
+  console.log('Appended discovery feed properly');
 }

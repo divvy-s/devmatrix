@@ -120,6 +120,6 @@ export const featureFlags = pgTable('feature_flags', {
 
 let schema = fs.readFileSync('packages/db/src/schema.ts', 'utf8');
 if (!schema.includes('reports')) {
-    fs.writeFileSync('packages/db/src/schema.ts', schema + '\n' + p4);
+  fs.writeFileSync('packages/db/src/schema.ts', schema + '\n' + p4);
 }
 console.log('Appended tables effectively');

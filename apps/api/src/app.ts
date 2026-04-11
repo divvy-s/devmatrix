@@ -1,5 +1,8 @@
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from 'fastify-type-provider-zod';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
@@ -41,7 +44,7 @@ export const buildApp = async () => {
 
   // Request ID and Logger hooks
   app.decorateRequest('trace_id', '');
-  
+
   app.addHook('onRequest', (request, reply, done) => {
     const traceId = (request.headers['x-trace-id'] as string) || uuidv4();
     request.trace_id = traceId;
@@ -50,46 +53,60 @@ export const buildApp = async () => {
   });
 
   app.addHook('onResponse', (request, reply, done) => {
-    logger.info({
-      trace_id: request.trace_id,
-      method: request.method,
-      url: request.url,
-      status: reply.statusCode,
-      duration_ms: (reply as any).getResponseTime(),
-    }, 'Request completed');
+    logger.info(
+      {
+        trace_id: request.trace_id,
+        method: request.method,
+        url: request.url,
+        status: reply.statusCode,
+        duration_ms: (reply as any).getResponseTime(),
+      },
+      'Request completed',
+    );
     done();
   });
 
   // Global Error Handler
-  app.setErrorHandler((error: globalThis.Error & { statusCode?: number }, request: FastifyRequest, reply: FastifyReply) => {
-    logger.error({
-      trace_id: request.trace_id,
-      err: error,
-    }, 'Error processing request');
-
-    if (error instanceof AppError) {
-      return reply.status(Number(error.statusCode)).send(error.toJSON(request.trace_id));
-    }
-
-    if (error.statusCode) {
-      // Sensible or other Fastify errors
-      return reply.status(error.statusCode).send({
-        error: {
-          code: 'HTTP_ERROR',
-          message: error.message,
+  app.setErrorHandler(
+    (
+      error: globalThis.Error & { statusCode?: number },
+      request: FastifyRequest,
+      reply: FastifyReply,
+    ) => {
+      logger.error(
+        {
           trace_id: request.trace_id,
-        }
-      });
-    }
+          err: error,
+        },
+        'Error processing request',
+      );
 
-    reply.status(500).send({
-      error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'An unexpected error occurred.',
-        trace_id: request.trace_id,
-      },
-    });
-  });
+      if (error instanceof AppError) {
+        return reply
+          .status(Number(error.statusCode))
+          .send(error.toJSON(request.trace_id));
+      }
+
+      if (error.statusCode) {
+        // Sensible or other Fastify errors
+        return reply.status(error.statusCode).send({
+          error: {
+            code: 'HTTP_ERROR',
+            message: error.message,
+            trace_id: request.trace_id,
+          },
+        });
+      }
+
+      reply.status(500).send({
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An unexpected error occurred.',
+          trace_id: request.trace_id,
+        },
+      });
+    },
+  );
 
   // Routes
   app.register(healthRoutes, { prefix: '/health' });

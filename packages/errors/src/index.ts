@@ -3,7 +3,12 @@ export class AppError extends Error {
   public statusCode: number;
   public field?: string;
 
-  constructor(message: string, code: string, statusCode: number, field?: string) {
+  constructor(
+    message: string,
+    code: string,
+    statusCode: number,
+    field?: string,
+  ) {
     super(message);
     this.name = this.constructor.name;
     this.code = code;
@@ -44,13 +49,23 @@ export class UnauthorizedError extends AppError {
 
 export class ConflictError extends AppError {
   constructor(resource: string, field: string) {
-    super(`Conflict on ${resource}: ${field} already exists or is in conflict`, 'CONFLICT', 409, field);
+    super(
+      `Conflict on ${resource}: ${field} already exists or is in conflict`,
+      'CONFLICT',
+      409,
+      field,
+    );
   }
 }
 
 export class ValidationError extends AppError {
   constructor(field: string, message: string) {
-    super(`Validation failed for ${field}: ${message}`, 'VALIDATION_ERROR', 400, field);
+    super(
+      `Validation failed for ${field}: ${message}`,
+      'VALIDATION_ERROR',
+      400,
+      field,
+    );
   }
 }
 

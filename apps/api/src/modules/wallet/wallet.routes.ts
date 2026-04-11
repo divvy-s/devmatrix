@@ -13,7 +13,7 @@ export async function walletRoutes(app: FastifyInstance) {
     {
       preHandler: [authenticateRequest],
     },
-    controller.getWallets as any
+    controller.getWallets as any,
   );
 
   server.post(
@@ -29,7 +29,7 @@ export async function walletRoutes(app: FastifyInstance) {
         }),
       },
     },
-    controller.addWallet as any
+    controller.addWallet as any,
   );
 
   server.delete(
@@ -42,7 +42,7 @@ export async function walletRoutes(app: FastifyInstance) {
         }),
       },
     },
-    controller.deleteWallet as any
+    controller.deleteWallet as any,
   );
 
   server.patch(
@@ -55,6 +55,6 @@ export async function walletRoutes(app: FastifyInstance) {
         }),
       },
     },
-    controller.setPrimaryWallet as any
+    controller.setPrimaryWallet as any,
   );
 }

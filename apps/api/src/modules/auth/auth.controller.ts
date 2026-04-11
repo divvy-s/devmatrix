@@ -8,25 +8,40 @@ export class AuthController {
     this.authService = new AuthService();
   }
 
-  generateNonce = async (request: FastifyRequest<{ Querystring: { address: string } }>, reply: FastifyReply) => {
+  generateNonce = async (
+    request: FastifyRequest<{ Querystring: { address: string } }>,
+    reply: FastifyReply,
+  ) => {
     const { address } = request.query;
     const result = await this.authService.generateNonce(address);
     return reply.send(result);
   };
 
-  verifyWallet = async (request: FastifyRequest<{ Body: { address: string; signature: string; nonce: string; } }>, reply: FastifyReply) => {
+  verifyWallet = async (
+    request: FastifyRequest<{
+      Body: { address: string; signature: string; nonce: string };
+    }>,
+    reply: FastifyReply,
+  ) => {
     const { address, signature, nonce } = request.body;
-    const result = await this.authService.verifyWallet(address, signature, nonce);
+    const result = await this.authService.verifyWallet(
+      address,
+      signature,
+      nonce,
+    );
     return reply.send(result);
   };
 
-  refresh = async (request: FastifyRequest<{ Body?: { refreshToken?: string } }>, reply: FastifyReply) => {
+  refresh = async (
+    request: FastifyRequest<{ Body?: { refreshToken?: string } }>,
+    reply: FastifyReply,
+  ) => {
     // Extract from header or body
     let token = request.body?.refreshToken;
     if (!token && request.headers.authorization?.startsWith('Bearer ')) {
       token = request.headers.authorization.split(' ')[1];
     }
-    
+
     if (!token) {
       throw new Error('Refresh token required'); // Will map to 500 or validation error
     }

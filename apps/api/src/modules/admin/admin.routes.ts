@@ -1,6 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { AdminAppsService } from './admin.service';
-import { authenticateRequest, requireRole } from '../../middleware/auth.middleware';
+import {
+  authenticateRequest,
+  requireRole,
+} from '../../middleware/auth.middleware';
 import { ForbiddenError } from '@workspace/errors';
 import { z } from 'zod';
 
@@ -10,29 +13,81 @@ export async function adminRoutes(app: FastifyInstance) {
   app.addHook('preHandler', async (req, rep) => {
     await authenticateRequest(req, rep);
     if (!(req.user?.roles || []).includes('admin')) {
-       throw new ForbiddenError('Admin required');
+      throw new ForbiddenError('Admin required');
     }
   });
 
-  app.post('/apps/:appId/approve', { schema: { params: z.object({ appId: z.string().uuid() }) } }, async (req, rep) => {
-    return rep.send(await service.approveApp((req.params as any).appId, req.user!.userId));
-  });
+  app.post(
+    '/apps/:appId/approve',
+    { schema: { params: z.object({ appId: z.string().uuid() }) } },
+    async (req, rep) => {
+      return rep.send(
+        await service.approveApp((req.params as any).appId, req.user!.userId),
+      );
+    },
+  );
 
-  app.post('/apps/:appId/reject', { schema: { params: z.object({ appId: z.string().uuid() }), body: z.object({ reason: z.string().min(1) }) } }, async (req, rep) => {
-    return rep.send(await service.rejectApp((req.params as any).appId, ((req.body as any)||{}).reason));
-  });
+  app.post(
+    '/apps/:appId/reject',
+    {
+      schema: {
+        params: z.object({ appId: z.string().uuid() }),
+        body: z.object({ reason: z.string().min(1) }),
+      },
+    },
+    async (req, rep) => {
+      return rep.send(
+        await service.rejectApp(
+          (req.params as any).appId,
+          ((req.body as any) || {}).reason,
+        ),
+      );
+    },
+  );
 
-  app.post('/apps/:appId/suspend', { schema: { params: z.object({ appId: z.string().uuid() }), body: z.object({ reason: z.string().min(1) }) } }, async (req, rep) => {
-    return rep.send(await service.suspendApp((req.params as any).appId, ((req.body as any)||{}).reason));
-  });
+  app.post(
+    '/apps/:appId/suspend',
+    {
+      schema: {
+        params: z.object({ appId: z.string().uuid() }),
+        body: z.object({ reason: z.string().min(1) }),
+      },
+    },
+    async (req, rep) => {
+      return rep.send(
+        await service.suspendApp(
+          (req.params as any).appId,
+          ((req.body as any) || {}).reason,
+        ),
+      );
+    },
+  );
 
-  app.get('/feature-flags', { preHandler: [authenticateRequest, requireRole('admin')] }, async (req, rep) => {
-     return rep.send(await service.listFeatureFlags());
-  });
-  app.post('/feature-flags', { preHandler: [authenticateRequest, requireRole('admin')] }, async (req, rep) => {
-     return rep.status(201).send(await service.createFeatureFlag((req.body as any).name, req.body));
-  });
-  app.patch('/feature-flags/:name', { preHandler: [authenticateRequest, requireRole('admin')] }, async (req, rep) => {
-     return rep.send(await service.updateFeatureFlag((req.params as any).name, req.body));
-  });
+  app.get(
+    '/feature-flags',
+    { preHandler: [authenticateRequest, requireRole('admin')] },
+    async (req, rep) => {
+      return rep.send(await service.listFeatureFlags());
+    },
+  );
+  app.post(
+    '/feature-flags',
+    { preHandler: [authenticateRequest, requireRole('admin')] },
+    async (req, rep) => {
+      return rep
+        .status(201)
+        .send(
+          await service.createFeatureFlag((req.body as any).name, req.body),
+        );
+    },
+  );
+  app.patch(
+    '/feature-flags/:name',
+    { preHandler: [authenticateRequest, requireRole('admin')] },
+    async (req, rep) => {
+      return rep.send(
+        await service.updateFeatureFlag((req.params as any).name, req.body),
+      );
+    },
+  );
 }

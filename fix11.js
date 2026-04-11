@@ -3,17 +3,23 @@ const fs = require('fs');
 // Export webhookQueue
 let queueIdx = fs.readFileSync('packages/queue/src/index.ts', 'utf8');
 if (!queueIdx.includes('webhook.queue')) {
-  fs.writeFileSync('packages/queue/src/index.ts', queueIdx + "export * from './webhook.queue';\\n");
+  fs.writeFileSync(
+    'packages/queue/src/index.ts',
+    queueIdx + "export * from './webhook.queue';\\n",
+  );
 }
 
 // Update Outbox worker
-let outbox = fs.readFileSync('apps/api/src/infrastructure/outbox.worker.ts', 'utf8');
+let outbox = fs.readFileSync(
+  'apps/api/src/infrastructure/outbox.worker.ts',
+  'utf8',
+);
 if (!outbox.includes('webhookDeliveries')) {
   outbox = outbox.replace(
     "import { db, outboxEvents } from '@workspace/db';",
-    "import { db, outboxEvents, webhookDeliveries, webhookSubscriptions, apps } from '@workspace/db';\\nimport { and } from 'drizzle-orm';\\nimport { v4 as uuidv4 } from 'uuid';\\nimport { webhookQueue } from '@workspace/queue';"
+    "import { db, outboxEvents, webhookDeliveries, webhookSubscriptions, apps } from '@workspace/db';\\nimport { and } from 'drizzle-orm';\\nimport { v4 as uuidv4 } from 'uuid';\\nimport { webhookQueue } from '@workspace/queue';",
   );
-  
+
   const dispatchLogic = `
   private async dispatchWebhooks(event: typeof outboxEvents.$inferSelect) {
     const subscriptions = await db.select().from(webhookSubscriptions)
@@ -42,19 +48,25 @@ if (!outbox.includes('webhookDeliveries')) {
     }
   }
 `;
-  
-  outbox = outbox.replace("start() {", dispatchLogic + "\\n  start() {");
-  outbox = outbox.replace("await consumer(event.payload);\\n      } else {", "await consumer(event.payload);\\n      }\\n      await this.dispatchWebhooks(event);\\n      if (!consumer) {");
-  
+
+  outbox = outbox.replace('start() {', dispatchLogic + '\\n  start() {');
+  outbox = outbox.replace(
+    'await consumer(event.payload);\\n      } else {',
+    'await consumer(event.payload);\\n      }\\n      await this.dispatchWebhooks(event);\\n      if (!consumer) {',
+  );
+
   fs.writeFileSync('apps/api/src/infrastructure/outbox.worker.ts', outbox);
 }
 
 // Add routes
-let devRoutes = fs.readFileSync('apps/api/src/modules/developers/developers.routes.ts', 'utf8');
+let devRoutes = fs.readFileSync(
+  'apps/api/src/modules/developers/developers.routes.ts',
+  'utf8',
+);
 if (!devRoutes.includes('WebhooksController')) {
   devRoutes = devRoutes.replace(
-     "import { DevelopersController } from './developers.controller';",
-     "import { DevelopersController } from './developers.controller';\\nimport { WebhooksController } from '../webhooks/webhooks.controller';"
+    "import { DevelopersController } from './developers.controller';",
+    "import { DevelopersController } from './developers.controller';\\nimport { WebhooksController } from '../webhooks/webhooks.controller';",
   );
   const routeInject = `
   const webhooksCtrl = new WebhooksController();
@@ -62,8 +74,13 @@ if (!devRoutes.includes('WebhooksController')) {
   server.get('/me/apps/:appId/webhooks/:subscriptionId/deliveries', {}, webhooksCtrl.listDeliveries as any);
   server.post('/me/apps/:appId/webhooks/:subscriptionId/retry', {}, webhooksCtrl.retryDelivery as any);
 `;
-  devRoutes = devRoutes.replace(/}\\s*$/, routeInject + "\\n}");
-  fs.writeFileSync('apps/api/src/modules/developers/developers.routes.ts', devRoutes);
+  devRoutes = devRoutes.replace(/}\\s*$/, routeInject + '\\n}');
+  fs.writeFileSync(
+    'apps/api/src/modules/developers/developers.routes.ts',
+    devRoutes,
+  );
 }
 
-console.log('Outbox Webhook Relay updated and Webhook Developer Paths constructed!');
+console.log(
+  'Outbox Webhook Relay updated and Webhook Developer Paths constructed!',
+);

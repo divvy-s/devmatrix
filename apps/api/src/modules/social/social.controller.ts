@@ -8,43 +8,99 @@ export class SocialController {
     this.socialService = new SocialService();
   }
 
-  follow = async (request: FastifyRequest<{ Params: { username: string } }>, reply: FastifyReply) => {
-    const result = await this.socialService.follow(request.user!.userId, request.params.username);
+  follow = async (
+    request: FastifyRequest<{ Params: { username: string } }>,
+    reply: FastifyReply,
+  ) => {
+    const result = await this.socialService.follow(
+      request.user!.userId,
+      request.params.username,
+    );
     return reply.send(result);
   };
 
-  unfollow = async (request: FastifyRequest<{ Params: { username: string } }>, reply: FastifyReply) => {
-    const result = await this.socialService.unfollow(request.user!.userId, request.params.username);
+  unfollow = async (
+    request: FastifyRequest<{ Params: { username: string } }>,
+    reply: FastifyReply,
+  ) => {
+    const result = await this.socialService.unfollow(
+      request.user!.userId,
+      request.params.username,
+    );
     return reply.send(result);
   };
 
-  getFollowers = async (request: FastifyRequest<{ Params: { username: string }; Querystring: { cursor?: string } }>, reply: FastifyReply) => {
-    const result = await this.socialService.getFollowers(request.params.username, request.user?.userId, request.query.cursor);
+  getFollowers = async (
+    request: FastifyRequest<{
+      Params: { username: string };
+      Querystring: { cursor?: string };
+    }>,
+    reply: FastifyReply,
+  ) => {
+    const result = await this.socialService.getFollowers(
+      request.params.username,
+      request.user?.userId,
+      request.query.cursor,
+    );
     return reply.send(result);
   };
 
-  getFollowing = async (request: FastifyRequest<{ Params: { username: string }; Querystring: { cursor?: string } }>, reply: FastifyReply) => {
-    const result = await this.socialService.getFollowing(request.params.username, request.user?.userId, request.query.cursor);
+  getFollowing = async (
+    request: FastifyRequest<{
+      Params: { username: string };
+      Querystring: { cursor?: string };
+    }>,
+    reply: FastifyReply,
+  ) => {
+    const result = await this.socialService.getFollowing(
+      request.params.username,
+      request.user?.userId,
+      request.query.cursor,
+    );
     return reply.send(result);
   };
 
-  block = async (request: FastifyRequest<{ Params: { username: string } }>, reply: FastifyReply) => {
-    await this.socialService.block(request.user!.userId, request.params.username);
+  block = async (
+    request: FastifyRequest<{ Params: { username: string } }>,
+    reply: FastifyReply,
+  ) => {
+    await this.socialService.block(
+      request.user!.userId,
+      request.params.username,
+    );
     return reply.status(200).send({ success: true });
   };
 
-  unblock = async (request: FastifyRequest<{ Params: { username: string } }>, reply: FastifyReply) => {
-    await this.socialService.unblock(request.user!.userId, request.params.username);
+  unblock = async (
+    request: FastifyRequest<{ Params: { username: string } }>,
+    reply: FastifyReply,
+  ) => {
+    await this.socialService.unblock(
+      request.user!.userId,
+      request.params.username,
+    );
     return reply.status(200).send({ success: true });
   };
 
-  mute = async (request: FastifyRequest<{ Params: { username: string } }>, reply: FastifyReply) => {
-    await this.socialService.mute(request.user!.userId, request.params.username);
+  mute = async (
+    request: FastifyRequest<{ Params: { username: string } }>,
+    reply: FastifyReply,
+  ) => {
+    await this.socialService.mute(
+      request.user!.userId,
+      request.params.username,
+    );
     return reply.status(200).send({ success: true });
   };
 
-  unmute = async (request: FastifyRequest<{ Params: { username: string } }>, reply: FastifyReply) => {
-    await this.socialService.unmute(request.user!.userId, request.params.username);
+  unmute = async (
+    request: FastifyRequest<{ Params: { username: string } }>,
+    reply: FastifyReply,
+  ) => {
+    await this.socialService.unmute(
+      request.user!.userId,
+      request.params.username,
+    );
     return reply.status(200).send({ success: true });
   };
 

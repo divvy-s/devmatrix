@@ -1,11 +1,17 @@
 const fs = require('fs');
 const slashN = String.fromCharCode(92) + 'n';
 
-let f1 = fs.readFileSync('apps/api/src/infrastructure/outbox.worker.ts', 'utf8');
+let f1 = fs.readFileSync(
+  'apps/api/src/infrastructure/outbox.worker.ts',
+  'utf8',
+);
 f1 = f1.split(slashN).join('\n');
 fs.writeFileSync('apps/api/src/infrastructure/outbox.worker.ts', f1);
 
-let f2 = fs.readFileSync('apps/api/src/modules/developers/developers.routes.ts', 'utf8');
+let f2 = fs.readFileSync(
+  'apps/api/src/modules/developers/developers.routes.ts',
+  'utf8',
+);
 f2 = f2.split(slashN).join('\n');
 fs.writeFileSync('apps/api/src/modules/developers/developers.routes.ts', f2);
 

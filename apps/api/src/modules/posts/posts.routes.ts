@@ -27,49 +27,73 @@ export async function postsRoutes(app: FastifyInstance) {
           quotedPostId: z.string().uuid().optional(),
           mediaIds: z.array(z.string().uuid()).max(4).optional(),
           visibility: z.enum(['public', 'followers']).optional(),
-        })
-      }
+        }),
+      },
     },
-    controller.createPost as any
+    controller.createPost as any,
   );
 
   server.get(
     '/:id',
     {
       preHandler: [optionalAuth],
-      schema: { params: z.object({ id: z.string().uuid() }) }
+      schema: { params: z.object({ id: z.string().uuid() }) },
     },
-    controller.getPost as any
+    controller.getPost as any,
   );
 
   server.patch(
     '/:id',
     {
       preHandler: [authenticateRequest],
-      schema: { 
+      schema: {
         params: z.object({ id: z.string().uuid() }),
-        body: z.object({ content: z.string().min(1).max(500) })
-      }
+        body: z.object({ content: z.string().min(1).max(500) }),
+      },
     },
-    controller.updatePost as any
+    controller.updatePost as any,
   );
 
   server.delete(
     '/:id',
     {
       preHandler: [authenticateRequest],
-      schema: { params: z.object({ id: z.string().uuid() }) }
+      schema: { params: z.object({ id: z.string().uuid() }) },
     },
-    controller.deletePost as any
+    controller.deletePost as any,
   );
 
   // Interactions
-  server.post('/:id/like', { preHandler: [authenticateRequest] }, controller.like as any);
-  server.delete('/:id/like', { preHandler: [authenticateRequest] }, controller.unlike as any);
-  
-  server.post('/:id/repost', { preHandler: [authenticateRequest] }, controller.repost as any);
-  server.delete('/:id/repost', { preHandler: [authenticateRequest] }, controller.unrepost as any);
-  
-  server.post('/:id/bookmark', { preHandler: [authenticateRequest] }, controller.bookmark as any);
-  server.delete('/:id/bookmark', { preHandler: [authenticateRequest] }, controller.unbookmark as any);
+  server.post(
+    '/:id/like',
+    { preHandler: [authenticateRequest] },
+    controller.like as any,
+  );
+  server.delete(
+    '/:id/like',
+    { preHandler: [authenticateRequest] },
+    controller.unlike as any,
+  );
+
+  server.post(
+    '/:id/repost',
+    { preHandler: [authenticateRequest] },
+    controller.repost as any,
+  );
+  server.delete(
+    '/:id/repost',
+    { preHandler: [authenticateRequest] },
+    controller.unrepost as any,
+  );
+
+  server.post(
+    '/:id/bookmark',
+    { preHandler: [authenticateRequest] },
+    controller.bookmark as any,
+  );
+  server.delete(
+    '/:id/bookmark',
+    { preHandler: [authenticateRequest] },
+    controller.unbookmark as any,
+  );
 }

@@ -14,7 +14,7 @@ export async function identityRoutes(app: FastifyInstance) {
     {
       preHandler: [authenticateRequest],
     },
-    controller.getMe as any
+    controller.getMe as any,
   );
 
   server.patch(
@@ -32,7 +32,7 @@ export async function identityRoutes(app: FastifyInstance) {
         }),
       },
     },
-    controller.updateProfile as any
+    controller.updateProfile as any,
   );
 
   server.post(
@@ -44,7 +44,7 @@ export async function identityRoutes(app: FastifyInstance) {
         }),
       },
     },
-    controller.checkUsername as any
+    controller.checkUsername as any,
   );
 
   // We register a hook to decode user optionally if Bearer token is provided
@@ -69,6 +69,6 @@ export async function identityRoutes(app: FastifyInstance) {
         }),
       },
     },
-    controller.getProfileByUsername as any
+    controller.getProfileByUsername as any,
   );
 }

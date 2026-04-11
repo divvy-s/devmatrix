@@ -13,32 +13,32 @@ export async function notificationsRoutes(app: FastifyInstance) {
   server.get(
     '/',
     { schema: { querystring: z.object({ cursor: z.string().optional() }) } },
-    controller.getNotifications as any
+    controller.getNotifications as any,
   );
 
   server.post('/read-all', {}, controller.readAll as any);
-  
+
   server.patch(
     '/:id/read',
     { schema: { params: z.object({ id: z.string().uuid() }) } },
-    controller.readOne as any
+    controller.readOne as any,
   );
 
   server.get('/preferences', {}, controller.getPreferences as any);
-  
+
   server.patch(
     '/preferences',
-    { 
-      schema: { 
+    {
+      schema: {
         body: z.object({
           notifyOnFollow: z.boolean().optional(),
           notifyOnLike: z.boolean().optional(),
           notifyOnReply: z.boolean().optional(),
           notifyOnRepost: z.boolean().optional(),
           notifyOnMention: z.boolean().optional(),
-        }) 
-      } 
+        }),
+      },
     },
-    controller.updatePreferences as any
+    controller.updatePreferences as any,
   );
 }

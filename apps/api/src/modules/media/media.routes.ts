@@ -7,9 +7,13 @@ export async function mediaRoutes(app: FastifyInstance) {
   await app.register(fastifyMultipart, {
     limits: {
       fileSize: 50 * 1024 * 1024,
-    }
+    },
   });
 
   const controller = new MediaController();
-  app.post('/upload', { preHandler: [authenticateRequest] }, controller.upload as any);
+  app.post(
+    '/upload',
+    { preHandler: [authenticateRequest] },
+    controller.upload as any,
+  );
 }

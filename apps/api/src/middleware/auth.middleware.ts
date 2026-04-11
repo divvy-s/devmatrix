@@ -7,17 +7,24 @@ import { redisConnection } from '@workspace/queue';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
-export async function authenticateRequest(request: FastifyRequest, reply: FastifyReply) {
+export async function authenticateRequest(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new UnauthorizedError('TOKEN_MISSING');
   }
 
   const token = authHeader.split(' ')[1] as string;
-  
+
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { sub: string, roles: string[], session_id: string };
-    
+    const payload = jwt.verify(token, JWT_SECRET) as {
+      sub: string;
+      roles: string[];
+      session_id: string;
+    };
+
     // Check if session exists, not revoked, not expired
     const [session] = await db
       .select({ id: sessions.id })
@@ -26,8 +33,8 @@ export async function authenticateRequest(request: FastifyRequest, reply: Fastif
         and(
           eq(sessions.id, payload.session_id),
           isNull(sessions.revokedAt),
-          gt(sessions.expiresAt, new Date())
-        )
+          gt(sessions.expiresAt, new Date()),
+        ),
       )
       .limit(1);
 
@@ -39,7 +46,11 @@ export async function authenticateRequest(request: FastifyRequest, reply: Fastif
     let status = await redisConnection.get(cacheKey);
 
     if (!status) {
-      const uArr = await db.select({ status: users.status }).from(users).where(eq(users.id, payload.sub)).limit(1);
+      const uArr = await db
+        .select({ status: users.status })
+        .from(users)
+        .where(eq(users.id, payload.sub))
+        .limit(1);
       status = uArr[0]?.status || 'deleted';
       await redisConnection.setex(cacheKey, 60, status);
     }
@@ -54,7 +65,7 @@ export async function authenticateRequest(request: FastifyRequest, reply: Fastif
     request.user = {
       userId: payload.sub,
       roles: payload.roles,
-      sessionId: payload.session_id
+      sessionId: payload.session_id,
     };
   } catch (error) {
     if (error instanceof UnauthorizedError) {
