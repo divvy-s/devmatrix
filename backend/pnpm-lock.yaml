@@ -76,7 +76,7 @@ importers:
         version: 5.73.4
       dotenv-safe:
         specifier: ^9.1.0
-        version: 9.1.0(dotenv@8.6.0)
+        version: 9.1.0(dotenv@17.4.1)
       drizzle-orm:
         specifier: ^0.30.10
         version: 0.30.10(postgres@3.4.9)
@@ -123,6 +123,9 @@ importers:
 
   packages/db:
     dependencies:
+      dotenv:
+        specifier: ^17.4.1
+        version: 17.4.1
       drizzle-orm:
         specifier: ^0.30.9
         version: 0.30.10(postgres@3.4.9)
@@ -133,6 +136,9 @@ importers:
       drizzle-kit:
         specifier: ^0.20.17
         version: 0.20.18
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
 
   packages/errors: {}
 
@@ -1900,6 +1906,10 @@ packages:
     resolution: {integrity: sha512-2qwVAnUN+EDpu41pIK1XiJpHXKHV9Dnti3cE1EnUXT1/BV5+B7xuSZtgZ/4LExkCpp5F6BGikraezQL+8hKCOA==}
     peerDependencies:
       dotenv: '>= 8.2.0'
+
+  dotenv@17.4.1:
+    resolution: {integrity: sha512-k8DaKGP6r1G30Lx8V4+pCsLzKr8vLmV2paqEj1Y55GdAgJuIqpRp5FfajGF8KtwMxCz9qJc6wUIJnm053d/WCw==}
+    engines: {node: '>=12'}
 
   dotenv@8.6.0:
     resolution: {integrity: sha512-IrPdXQsk2BbzvCBGBOTmmSH5SodmqZNt4ERAZDmW4CT+tL8VtvinqywuANaFu4bOMWki16nqf0e4oC0QIaDr/g==}
@@ -4800,9 +4810,11 @@ snapshots:
     dependencies:
       heap: 0.2.7
 
-  dotenv-safe@9.1.0(dotenv@8.6.0):
+  dotenv-safe@9.1.0(dotenv@17.4.1):
     dependencies:
-      dotenv: 8.6.0
+      dotenv: 17.4.1
+
+  dotenv@17.4.1: {}
 
   dotenv@8.6.0: {}
 

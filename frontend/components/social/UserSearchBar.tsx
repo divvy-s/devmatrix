@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { searchUsers } from "@/lib/api";
 import { User } from "@/lib/types";
+import { useBackendToken } from "@/hooks/use-api";
 import { UserCard } from "./UserCard";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 
@@ -11,6 +12,7 @@ export function UserSearchBar() {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const token = useBackendToken();
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -40,7 +42,7 @@ export function UserSearchBar() {
     setLoading(true);
     const timeout = setTimeout(async () => {
       try {
-        const data = await searchUsers(query);
+        const data = await searchUsers(query, token);
         setResults(data.slice(0, 8));
       } catch (err) {
         console.error(err);

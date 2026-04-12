@@ -2,12 +2,14 @@
 import { useState } from "react";
 import { Comment } from "@/lib/types";
 import { addComment } from "@/lib/api";
+import { useBackendToken } from "@/hooks/use-api";
 import { Avatar } from "../shared/Avatar";
 
 export function CommentSection({ postId, initialComments = [] }: { postId: string, initialComments?: Comment[] }) {
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const token = useBackendToken();
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -26,7 +28,7 @@ export function CommentSection({ postId, initialComments = [] }: { postId: strin
     setComments(prev => [...prev, tempComment]);
 
     try {
-      await addComment(postId, newContent);
+      await addComment(postId, newContent, token);
     } catch {
       setComments(prev => prev.filter(c => c.id !== tempComment.id));
       setInput(newContent);

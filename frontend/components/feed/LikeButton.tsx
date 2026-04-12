@@ -1,6 +1,7 @@
 "use client";
 import { useOptimistic, useTransition, useState } from "react";
 import { likePost } from "@/lib/api";
+import { useBackendToken } from "@/hooks/use-api";
 
 interface LikeButtonProps {
   postId: string;
@@ -11,6 +12,7 @@ interface LikeButtonProps {
 export function LikeButton({ postId, initialLikes, initialLikedByMe }: LikeButtonProps) {
   const [actualLikes, setActualLikes] = useState(initialLikes);
   const [actualLiked, setActualLiked] = useState(initialLikedByMe);
+  const token = useBackendToken();
   
   const [optimisticState, addOptimisticState] = useOptimistic(
     { likes: actualLikes, likedByMe: actualLiked },
@@ -29,7 +31,7 @@ export function LikeButton({ postId, initialLikes, initialLikedByMe }: LikeButto
     });
 
     try {
-      await likePost(postId);
+      await likePost(postId, token);
       setActualLikes(prev => prev + (newLiked ? 1 : -1));
       setActualLiked(newLiked);
     } catch {

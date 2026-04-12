@@ -49,7 +49,7 @@ export function CreatePostFAB() {
         tags: tags.length > 0 ? tags : undefined,
         appId: appId.trim() || undefined,
         mediaIds: mediaIds.length > 0 ? mediaIds : undefined,
-      });
+      }, token);
       setTitle("");
       setContent("");
       setTagsInput("");

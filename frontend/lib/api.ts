@@ -151,32 +151,33 @@ export async function createPost(data: {
   mediaIds?: string[];
   tags?: string[];
   appId?: string;
-}): Promise<void> {
-  return apiPost<void>("/api/post", { body: JSON.stringify(data) });
+}, token?: string | null): Promise<void> {
+  return apiPost<void>("/api/post", { body: JSON.stringify(data), token });
 }
 
-export async function likePost(postId: string): Promise<void> {
-  return apiPost<void>("/api/like", { body: JSON.stringify({ postId }) });
+export async function likePost(postId: string, token?: string | null): Promise<void> {
+  return apiPost<void>("/api/like", { body: JSON.stringify({ postId }), token });
 }
 
-export async function addComment(postId: string, content: string): Promise<void> {
-  return apiPost<void>("/api/comment", { body: JSON.stringify({ postId, content }) });
+export async function addComment(postId: string, content: string, token?: string | null): Promise<void> {
+  return apiPost<void>("/api/comment", { body: JSON.stringify({ postId, content }), token });
 }
 
-export async function searchUsers(query: string): Promise<FeedUser[]> {
-  return apiGet<FeedUser[]>(`/api/users/search?q=${encodeURIComponent(query)}`);
+export async function searchUsers(query: string, token?: string | null): Promise<FeedUser[]> {
+  return apiGet<FeedUser[]>(`/api/users/search?q=${encodeURIComponent(query)}`, { token });
 }
 
-export async function toggleFollow(userId: string): Promise<void> {
-  return apiPost<void>("/api/follow", { body: JSON.stringify({ userId }) });
+export async function toggleFollow(userId: string, token?: string | null): Promise<void> {
+  return apiPost<void>("/api/follow", { body: JSON.stringify({ userId }), token });
 }
 
 export async function triggerMiniAppAction(
   appId: string,
   action: string,
-  payload?: Record<string, unknown>
+  payload?: Record<string, unknown>,
+  token?: string | null
 ): Promise<void> {
-  return apiPost<void>(`/api/miniapp/${appId}/action`, { body: JSON.stringify({ action, payload }) });
+  return apiPost<void>(`/api/miniapp/${appId}/action`, { body: JSON.stringify({ action, payload }), token });
 }
 
 export async function uploadMedia(file: File, token?: string | null): Promise<{ id: string; url: string; status: string }> {

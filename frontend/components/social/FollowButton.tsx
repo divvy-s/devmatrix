@@ -1,9 +1,11 @@
 "use client";
 import { useOptimistic, useTransition, useState } from "react";
 import { toggleFollow } from "@/lib/api";
+import { useBackendToken } from "@/hooks/use-api";
 
 export function FollowButton({ userId, initialIsFollowing }: { userId: string, initialIsFollowing: boolean }) {
   const [actualFollowing, setActualFollowing] = useState(initialIsFollowing);
+  const token = useBackendToken();
   
   const [optimisticFollowing, addOptimisticFollowing] = useOptimistic(
     actualFollowing,
@@ -20,7 +22,7 @@ export function FollowButton({ userId, initialIsFollowing }: { userId: string, i
     });
 
     try {
-      await toggleFollow(userId);
+      await toggleFollow(userId, token);
       setActualFollowing(newFollowing);
     } catch {
       console.error("Failed to follow user");

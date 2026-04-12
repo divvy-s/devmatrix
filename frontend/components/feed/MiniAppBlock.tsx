@@ -2,19 +2,21 @@
 import { MiniApp } from "@/lib/types";
 import { triggerMiniAppAction } from "@/lib/api";
 import { useState } from "react";
+import { useBackendToken } from "@/hooks/use-api";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import Image from "next/image";
 
 export function MiniAppBlock({ miniApp }: { miniApp?: MiniApp }) {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const token = useBackendToken();
 
   if (!miniApp) return null;
 
   const handleAction = async () => {
     setLoading(true);
     try {
-      await triggerMiniAppAction(miniApp.appId, "open");
+      await triggerMiniAppAction(miniApp.appId, "open", undefined, token);
       setToast("App launched");
     } catch {
       setToast("Error launching app");
