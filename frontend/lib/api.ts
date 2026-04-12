@@ -139,10 +139,10 @@ export async function apiDelete<T>(path: string, options?: Omit<FetchOptions, "m
 
 import { Post as FeedPost, User as FeedUser, MiniApp } from "./types";
 
+import { FAKE_FEED } from "./mockFeed";
+
 export async function getFeed(): Promise<FeedPost[]> {
-  const res = await fetch("/api/feed");
-  if (!res.ok) throw new Error("Failed to fetch feed");
-  return res.json();
+  return apiGet<FeedPost[]>("/api/v1/posts");
 }
 
 export async function createPost(data: {
@@ -152,15 +152,15 @@ export async function createPost(data: {
   tags?: string[];
   appId?: string;
 }, token?: string | null): Promise<void> {
-  return apiPost<void>("/api/post", { body: JSON.stringify(data), token });
+  return apiPost<void>("/api/v1/posts", { body: JSON.stringify(data), token });
 }
 
 export async function likePost(postId: string, token?: string | null): Promise<void> {
-  return apiPost<void>("/api/like", { body: JSON.stringify({ postId }), token });
+  return apiPost<void>(`/api/v1/posts/${postId}/like`, { token });
 }
 
 export async function addComment(postId: string, content: string, token?: string | null): Promise<void> {
-  return apiPost<void>("/api/comment", { body: JSON.stringify({ postId, content }), token });
+  return apiPost<void>("/api/v1/posts", { body: JSON.stringify({ content, parentId: postId }), token });
 }
 
 export async function searchUsers(query: string, token?: string | null): Promise<FeedUser[]> {
@@ -191,7 +191,7 @@ export async function uploadMedia(file: File, token?: string | null): Promise<{ 
     headers.set("Authorization", `Bearer ${token}`);
   }
   
-  const response = await fetch(`${API_URL}/api/media/upload`, {
+  const response = await fetch(`${API_URL}/api/v1/media/upload`, {
     method: "POST",
     body: formData,
     headers,

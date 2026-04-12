@@ -48,9 +48,9 @@ const handler = NextAuth({
               token.backendUserId = data.user?.id;
               token.backendUsername = data.user?.username;
               token.backendRoles = data.user?.roles;
-              token.backendAccessTokenExpires = Date.now() + 59 * 60 * 1000;
+              token.backendAccessTokenExpires = Date.now() + 14 * 60 * 1000;
             } else {
-              token.error = "BackendAuthenticationError";
+              throw new Error("Backend Google Authentication Failed");
             }
           } else if (account.provider === "github") {
             // Store the GitHub access token for repo access
@@ -68,13 +68,14 @@ const handler = NextAuth({
               token.backendUserId = data.user?.id;
               token.backendUsername = data.user?.username;
               token.backendRoles = data.user?.roles;
-              token.backendAccessTokenExpires = Date.now() + 59 * 60 * 1000;
+              token.backendAccessTokenExpires = Date.now() + 14 * 60 * 1000;
             } else {
-              token.error = "BackendAuthenticationError";
+              throw new Error(data?.error?.message || "Backend GitHub Authentication Failed");
             }
           }
         } catch (error) {
-          token.error = "BackendAuthenticationError";
+          console.error("JWT Callback Auth Error:", error);
+          throw new Error("Backend Authentication Failed: " + (error as Error).message);
         }
         return token;
       }
@@ -85,6 +86,11 @@ const handler = NextAuth({
       }
 
       // Refresh token
+      if (!token.backendRefreshToken) {
+        token.error = "RefreshAccessTokenError";
+        return token;
+      }
+
       try {
         const res = await fetch(`${apiUrl}/api/v1/auth/refresh`, {
           method: "POST",
@@ -95,7 +101,7 @@ const handler = NextAuth({
         if (res.ok && data) {
           token.backendAccessToken = data.accessToken;
           token.backendRefreshToken = data.refreshToken;
-          token.backendAccessTokenExpires = Date.now() + 59 * 60 * 1000;
+          token.backendAccessTokenExpires = Date.now() + 14 * 60 * 1000;
         } else {
           token.error = "RefreshAccessTokenError";
         }

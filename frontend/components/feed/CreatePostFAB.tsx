@@ -37,7 +37,7 @@ export function CreatePostFAB() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || loading) return;
+    if (!content.trim() || loading || !token) return;
 
     setLoading(true);
     const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
@@ -65,10 +65,18 @@ export function CreatePostFAB() {
     }
   };
 
+  const handleOpen = () => {
+    if (!token) {
+      alert("Please log in to create a post.");
+      return;
+    }
+    setOpen(true);
+  };
+
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-50"
         title="Create Post"
       >
