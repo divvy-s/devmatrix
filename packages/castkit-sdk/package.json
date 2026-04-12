@@ -1,0 +1,31 @@
+{
+  "name": "@castkit/sdk",
+  "version": "1.0.0",
+  "description": "Official CastKit SDK for mini-app development and deployment verification.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "castkit-verify": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "verify": "node dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

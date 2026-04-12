@@ -14,7 +14,7 @@ import { LogOut } from "lucide-react";
 import { useMounted } from "@/hooks/use-mounted";
 
 const NAV_LINKS = [
-  { href: "/explore", label: "Explore" },
+  { href: "/feed", label: "Feed" },
   { href: "/assets", label: "Assets" },
   { href: "/docs", label: "Docs" },
   { href: "/submit", label: "Submit App" },

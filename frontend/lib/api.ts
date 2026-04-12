@@ -136,3 +136,69 @@ export async function apiPost<T>(path: string, options?: Omit<FetchOptions, "met
 export async function apiDelete<T>(path: string, options?: Omit<FetchOptions, "method">) {
   return apiFetch<T>(path, { ...options, method: "DELETE" });
 }
+
+import { Post as FeedPost, User as FeedUser, MiniApp } from "./types";
+
+export async function getFeed(): Promise<FeedPost[]> {
+  const res = await fetch("/api/feed");
+  if (!res.ok) throw new Error("Failed to fetch feed");
+  return res.json();
+}
+
+export async function createPost(data: {
+  title?: string;
+  content: string;
+  mediaIds?: string[];
+  tags?: string[];
+  appId?: string;
+}): Promise<void> {
+  return apiPost<void>("/api/post", { body: JSON.stringify(data) });
+}
+
+export async function likePost(postId: string): Promise<void> {
+  return apiPost<void>("/api/like", { body: JSON.stringify({ postId }) });
+}
+
+export async function addComment(postId: string, content: string): Promise<void> {
+  return apiPost<void>("/api/comment", { body: JSON.stringify({ postId, content }) });
+}
+
+export async function searchUsers(query: string): Promise<FeedUser[]> {
+  return apiGet<FeedUser[]>(`/api/users/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function toggleFollow(userId: string): Promise<void> {
+  return apiPost<void>("/api/follow", { body: JSON.stringify({ userId }) });
+}
+
+export async function triggerMiniAppAction(
+  appId: string,
+  action: string,
+  payload?: Record<string, unknown>
+): Promise<void> {
+  return apiPost<void>(`/api/miniapp/${appId}/action`, { body: JSON.stringify({ action, payload }) });
+}
+
+export async function uploadMedia(file: File, token?: string | null): Promise<{ id: string; url: string; status: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  
+  const response = await fetch(`${API_URL}/api/media/upload`, {
+    method: "POST",
+    body: formData,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error("Media upload failed");
+  }
+
+  return response.json();
+}
