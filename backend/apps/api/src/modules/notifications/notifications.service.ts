@@ -6,7 +6,7 @@ import {
   userProfiles,
   posts,
 } from '@workspace/db';
-import { eq, and, desc, isNull, sql } from 'drizzle-orm';
+import { eq, and, desc, isNull, sql, inArray } from 'drizzle-orm';
 import { NotFoundError } from '@workspace/errors';
 
 export class NotificationsService {
@@ -71,7 +71,7 @@ export class NotificationsService {
       const matchedPosts = await db
         .select({ id: posts.id, content: posts.content })
         .from(posts)
-        .where(sql`id = ANY(${postIds})`);
+        .where(inArray(posts.id, postIds));
       for (const p of matchedPosts) {
         postPreviews[p.id] = p.content.substring(0, 100);
       }

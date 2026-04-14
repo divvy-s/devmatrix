@@ -25,34 +25,40 @@ export async function authenticateRequest(
       session_id: string;
     };
 
-    // Check if session exists, not revoked, not expired
-    const [session] = await db
-      .select({ id: sessions.id })
-      .from(sessions)
-      .where(
-        and(
-          eq(sessions.id, payload.session_id),
-          isNull(sessions.revokedAt),
-          gt(sessions.expiresAt, new Date()),
-        ),
-      )
-      .limit(1);
+    const cacheKey = `session_valid:${payload.session_id}`;
+    let cached = await redisConnection.get(cacheKey);
 
-    if (!session) {
+    if (cached === null) {
+      const [session] = await db
+        .select({ id: sessions.id })
+        .from(sessions)
+        .where(
+          and(
+            eq(sessions.id, payload.session_id),
+            isNull(sessions.revokedAt),
+            gt(sessions.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+      cached = session ? '1' : '0';
+      await redisConnection.setex(cacheKey, 30, cached);
+    }
+
+    if (cached !== '1') {
       throw new UnauthorizedError('SESSION_REVOKED');
     }
 
-    const cacheKey = `user_status:${payload.sub}`;
-    let status = await redisConnection.get(cacheKey);
+    const cacheKeyUser = `user_status:${payload.sub}`;
+    let status = await redisConnection.get(cacheKeyUser);
 
-    if (!status) {
+    if (status === null) {
       const uArr = await db
         .select({ status: users.status })
         .from(users)
         .where(eq(users.id, payload.sub))
         .limit(1);
       status = uArr[0]?.status || 'deleted';
-      await redisConnection.setex(cacheKey, 60, status);
+      await redisConnection.setex(cacheKeyUser, 60, status);
     }
 
     if (status === 'suspended') {
@@ -71,6 +77,9 @@ export async function authenticateRequest(
     if (error instanceof UnauthorizedError) {
       throw error;
     }
+    if (error instanceof ForbiddenError) {
+      throw error;
+    }
     if (error instanceof jwt.TokenExpiredError) {
       throw new UnauthorizedError('TOKEN_EXPIRED');
     }
@@ -86,7 +95,6 @@ export function requireRole(role: string) {
   };
 }
 
-// Augment Fastify Request
 declare module 'fastify' {
   interface FastifyRequest {
     user?: {

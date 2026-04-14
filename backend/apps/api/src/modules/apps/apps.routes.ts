@@ -32,15 +32,15 @@ export async function appsRoutes(app: FastifyInstance) {
   };
 
   server.get(
-    '/:slug',
-    { preHandler: [optionalAuth] },
-    controller.getAppBySlug as any,
-  );
-
-  server.get(
     '/developer/me',
     { preHandler: [authenticateRequest] },
     controller.getDeveloperApps as any,
+  );
+
+  server.get(
+    '/:slug',
+    { preHandler: [optionalAuth] },
+    controller.getAppBySlug as any,
   );
 
   server.patch(

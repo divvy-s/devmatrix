@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { ethers } from 'ethers';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import {
   db,
   users,
@@ -13,16 +14,73 @@ import {
 } from '@workspace/db';
 import { redisConnection } from '@workspace/queue';
 import { UnauthorizedError } from '@workspace/errors';
-import { eq, and, isNull, gt } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
-const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET || 'supersecretrefresh';
 const APP_NAME = 'Web3Social';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 
 export class AuthService {
+  private parseRefreshToken(
+    refreshToken: string,
+  ): { familyId: string; secret: string } | null {
+    const i = refreshToken.indexOf('|');
+    if (i <= 0 || i >= refreshToken.length - 1) return null;
+    const familyId = refreshToken.slice(0, i);
+    const secret = refreshToken.slice(i + 1);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(familyId)) {
+      return null;
+    }
+    if (!secret) return null;
+    return { familyId, secret };
+  }
+
+  private async issueSession(
+    userId: string,
+    roles: unknown,
+  ): Promise<{ accessToken: string; refreshToken: string; user: { id: string; username: string; roles: unknown } }> {
+    const sessionId = uuidv4();
+    const tokenFamilyId = uuidv4();
+    const secret = crypto.randomBytes(32).toString('hex');
+    const refreshToken = `${tokenFamilyId}|${secret}`;
+    const hash = await bcrypt.hash(secret, 10);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await db.insert(sessions).values({
+      id: sessionId,
+      userId,
+      refreshTokenHash: hash,
+      tokenFamilyId,
+      expiresAt,
+    });
+
+    const userArr = await db
+      .select({ username: users.username })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const accessToken = jwt.sign(
+      { sub: userId, roles, session_id: sessionId },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: userId,
+        username: userArr[0]?.username ?? '',
+        roles,
+      },
+    };
+  }
+
   async generateNonce(
     address: string,
   ): Promise<{ nonce: string; message: string }> {
@@ -34,9 +92,8 @@ export class AuthService {
 
     const nonce = crypto.randomBytes(32).toString('hex');
     const isoTimestamp = new Date().toISOString();
-    const message = `Sign in to ${APP_NAME}\\n\\nNonce: ${nonce}\\nIssued at: ${isoTimestamp}\\n\\nThis request will expire in 5 minutes.`;
+    const message = `Sign in to ${APP_NAME}\n\nNonce: ${nonce}\nIssued at: ${isoTimestamp}\n\nThis request will expire in 5 minutes.`;
 
-    // Store the full message so we can verify exactly
     await redisConnection.setex(
       `nonce:${normalized}`,
       300,
@@ -56,21 +113,19 @@ export class AuthService {
 
     const stored = JSON.parse(storedStr);
     if (stored.nonce !== nonce) {
-      throw new UnauthorizedError('NONCE_EXPIRED');
+      throw new UnauthorizedError('NONCE_MISMATCH');
     }
 
     await redisConnection.del(`nonce:${normalized}`);
 
-    // 3. Recover signer address
     const recoveredAddress = ethers.verifyMessage(stored.message, signature);
 
     if (recoveredAddress.toLowerCase() !== normalized) {
       throw new UnauthorizedError('INVALID_SIGNATURE');
     }
 
-    // Begin DB transaction
     let finalUserId: string;
-    let finalRoles: any;
+    let finalRoles: unknown;
     let finalUsername: string;
 
     await db.transaction(async (tx) => {
@@ -91,7 +146,6 @@ export class AuthService {
         finalUsername = userArr[0]?.username ?? '';
         finalRoles = userArr[0]?.roles;
       } else {
-        // Create user
         finalUserId = uuidv4();
         finalUsername = `user_${crypto.randomBytes(4).toString('hex')}`;
 
@@ -108,7 +162,7 @@ export class AuthService {
         await tx.insert(walletAddresses).values({
           userId: finalUserId,
           address: normalized,
-          chainId: 1, // default
+          chainId: 1,
           isPrimary: true,
           verifiedAt: new Date(),
         });
@@ -129,44 +183,15 @@ export class AuthService {
       }
     });
 
-    const sessionId = uuidv4();
-    const refreshToken = crypto.randomBytes(32).toString('hex');
-    const hash = await bcrypt.hash(refreshToken, 10);
-
-    // expiry 30 days
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
-
-    await db.insert(sessions).values({
-      id: sessionId,
-      userId: finalUserId!,
-      refreshTokenHash: hash,
-      expiresAt,
-    });
-
-    const accessToken = jwt.sign(
-      { sub: finalUserId!, roles: finalRoles, session_id: sessionId },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN as any },
-    );
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: finalUserId!,
-        username: finalUsername!,
-        roles: finalRoles,
-      },
-    };
+    return this.issueSession(finalUserId!, finalRoles!);
   }
 
   async verifyGitHub(githubAccessToken: string) {
-    // 1. Call GitHub API to get user info
     const ghRes = await fetch('https://api.github.com/user', {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
-        Accept: 'application/json',
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'DevMatrix-API/1.0',
       },
     });
 
@@ -177,15 +202,15 @@ export class AuthService {
     const ghUser = (await ghRes.json()) as {
       id: number;
       login: string;
+      name: string | null;
       avatar_url: string;
       email: string | null;
     };
 
     const githubId = String(ghUser.id);
 
-    // 2. Look up or create user
     let finalUserId: string;
-    let finalRoles: any;
+    let finalRoles: unknown;
     let finalUsername: string;
 
     await db.transaction(async (tx) => {
@@ -211,13 +236,27 @@ export class AuthService {
         finalUsername = userArr[0]?.username ?? ghUser.login;
         finalRoles = userArr[0]?.roles;
       } else {
-        // Create new user from GitHub profile
+        const base =
+          ghUser.login || `gh_${crypto.randomBytes(4).toString('hex')}`;
         finalUserId = uuidv4();
-        finalUsername = ghUser.login || `gh_${crypto.randomBytes(4).toString('hex')}`;
+        finalUsername = base;
+
+        let attempt = 0;
+        while (attempt < 10) {
+          const clash = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.username, finalUsername))
+            .limit(1);
+          if (!clash[0]) break;
+          finalUsername = `${base}_${crypto.randomBytes(2).toString('hex')}`;
+          attempt++;
+        }
 
         await tx.insert(users).values({
           id: finalUserId,
           username: finalUsername,
+          displayName: ghUser.name || finalUsername,
           roles: ['user'],
         });
 
@@ -235,130 +274,195 @@ export class AuthService {
 
         await tx.insert(outboxEvents).values({
           type: 'user.created',
-          payload: { userId: finalUserId, username: finalUsername, provider: 'github' },
+          payload: {
+            userId: finalUserId,
+            username: finalUsername,
+            provider: 'github',
+          },
         });
 
         finalRoles = ['user'];
       }
     });
 
-    // 3. Create session + tokens
-    const sessionId = uuidv4();
-    const refreshToken = crypto.randomBytes(32).toString('hex');
-    const hash = await bcrypt.hash(refreshToken, 10);
+    return this.issueSession(finalUserId!, finalRoles!);
+  }
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
+  async verifyGoogle(idToken: string) {
+    if (!GOOGLE_CLIENT_ID) {
+      throw new UnauthorizedError('GOOGLE_AUTH_NOT_CONFIGURED');
+    }
 
-    await db.insert(sessions).values({
-      id: sessionId,
-      userId: finalUserId!,
-      refreshTokenHash: hash,
-      expiresAt,
+    const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.sub) {
+      throw new UnauthorizedError('INVALID_GOOGLE_TOKEN');
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email ?? null;
+    const name = payload.name ?? email ?? `user_${googleId.slice(0, 8)}`;
+    const picture = payload.picture ?? null;
+
+    let finalUserId: string;
+    let finalRoles: unknown;
+    let finalUsername: string;
+
+    await db.transaction(async (tx) => {
+      const existingIdentityArr = await tx
+        .select()
+        .from(externalIdentities)
+        .where(
+          and(
+            eq(externalIdentities.provider, 'google'),
+            eq(externalIdentities.providerId, googleId),
+          ),
+        )
+        .limit(1);
+      const existingIdentity = existingIdentityArr[0];
+
+      if (existingIdentity) {
+        finalUserId = existingIdentity.userId;
+        const userArr = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, finalUserId))
+          .limit(1);
+        finalUsername = userArr[0]?.username ?? name;
+        finalRoles = userArr[0]?.roles;
+      } else {
+        const base =
+          email?.split('@')[0]?.replace(/[^a-zA-Z0-9_]/g, '_') ||
+          `g_${crypto.randomBytes(4).toString('hex')}`;
+        finalUserId = uuidv4();
+        finalUsername = base;
+
+        let attempt = 0;
+        while (attempt < 10) {
+          const clash = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.username, finalUsername))
+            .limit(1);
+          if (!clash[0]) break;
+          finalUsername = `${base}_${crypto.randomBytes(2).toString('hex')}`;
+          attempt++;
+        }
+
+        await tx.insert(users).values({
+          id: finalUserId,
+          username: finalUsername,
+          displayName: name,
+          roles: ['user'],
+        });
+
+        await tx.insert(userProfiles).values({
+          userId: finalUserId,
+          avatarUrl: picture,
+        });
+
+        await tx.insert(externalIdentities).values({
+          userId: finalUserId,
+          provider: 'google',
+          providerId: googleId,
+          verifiedAt: new Date(),
+        });
+
+        await tx.insert(outboxEvents).values({
+          type: 'user.created',
+          payload: {
+            userId: finalUserId,
+            username: finalUsername,
+            provider: 'google',
+          },
+        });
+
+        finalRoles = ['user'];
+      }
     });
 
-    const accessToken = jwt.sign(
-      { sub: finalUserId!, roles: finalRoles, session_id: sessionId },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN as any },
-    );
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: finalUserId!,
-        username: finalUsername!,
-        roles: finalRoles,
-      },
-    };
+    return this.issueSession(finalUserId!, finalRoles!);
   }
 
   async refresh(refreshToken: string) {
-    const hashedSessionArr = await db
-      .select()
-      .from(sessions)
-      .where(
-        and(isNull(sessions.revokedAt), gt(sessions.expiresAt, new Date())),
-      );
-
-    // we must find a match
-    let matchedSession = null;
-    for (const s of hashedSessionArr) {
-      if (await bcrypt.compare(refreshToken, s.refreshTokenHash)) {
-        matchedSession = s;
-        break;
-      }
-    }
-
-    if (!matchedSession) {
+    const parsed = this.parseRefreshToken(refreshToken);
+    if (!parsed) {
       throw new UnauthorizedError('INVALID_REFRESH_TOKEN');
     }
 
-    // Immediately set revoked_at = NOW() on the old session
-    await db
-      .update(sessions)
-      .set({ revokedAt: new Date() })
-      .where(eq(sessions.id, matchedSession.id));
+    const { familyId, secret } = parsed;
 
-    // Note: if multiple uses handling requires checking if the session was already revoked beforehand, but our query above checked isNull.
-    // If we want to check theft, we would select even revoked ones and compare.
-    const allSessions = await db
+    const familySessions = await db
       .select()
       .from(sessions)
-      .where(eq(sessions.userId, matchedSession.userId));
-    // simplified check for theft: if we found a match among revoked, it means replay!
-    let matchingRevoked = null;
-    for (const s of allSessions) {
-      if (
-        s.revokedAt &&
-        (await bcrypt.compare(refreshToken, s.refreshTokenHash))
-      ) {
-        matchingRevoked = s;
+      .where(eq(sessions.tokenFamilyId, familyId));
+
+    let matched: (typeof sessions.$inferSelect) | null = null;
+    for (const s of familySessions) {
+      if (await bcrypt.compare(secret, s.refreshTokenHash)) {
+        matched = s;
         break;
       }
     }
 
-    if (matchingRevoked) {
-      // Revoke all
+    if (!matched) {
+      throw new UnauthorizedError('INVALID_REFRESH_TOKEN');
+    }
+
+    if (matched.revokedAt) {
       await db
         .update(sessions)
         .set({ revokedAt: new Date() })
-        .where(eq(sessions.userId, matchedSession.userId));
+        .where(eq(sessions.userId, matched.userId));
       await db.insert(outboxEvents).values({
         type: 'security_event',
-        payload: { userId: matchedSession.userId, type: 'REFRESH_TOKEN_THEFT' },
+        payload: { userId: matched.userId, type: 'REFRESH_TOKEN_REUSE' },
       });
       throw new UnauthorizedError('INVALID_REFRESH_TOKEN');
     }
 
+    if (new Date(matched.expiresAt) <= new Date()) {
+      throw new UnauthorizedError('INVALID_REFRESH_TOKEN');
+    }
+
+    await db
+      .update(sessions)
+      .set({ revokedAt: new Date() })
+      .where(eq(sessions.id, matched.id));
+
+    const newSecret = crypto.randomBytes(32).toString('hex');
+    const newRefreshToken = `${familyId}|${newSecret}`;
+    const newHash = await bcrypt.hash(newSecret, 10);
     const sessionId = uuidv4();
-    const newRefreshToken = crypto.randomBytes(32).toString('hex');
-    const hash = await bcrypt.hash(newRefreshToken, 10);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
     await db.insert(sessions).values({
       id: sessionId,
-      userId: matchedSession.userId,
-      refreshTokenHash: hash,
+      userId: matched.userId,
+      refreshTokenHash: newHash,
+      tokenFamilyId: familyId,
       expiresAt,
     });
 
     const userArr = await db
       .select()
       .from(users)
-      .where(eq(users.id, matchedSession.userId))
+      .where(eq(users.id, matched.userId))
       .limit(1);
 
     const accessToken = jwt.sign(
       {
-        sub: matchedSession.userId,
+        sub: matched.userId,
         roles: userArr[0]?.roles,
         session_id: sessionId,
       },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN as any },
+      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions,
     );
 
     return {
@@ -372,9 +476,17 @@ export class AuthService {
       .update(sessions)
       .set({ revokedAt: new Date() })
       .where(eq(sessions.id, sessionId));
+    await redisConnection.del(`session_valid:${sessionId}`);
   }
 
   async logoutAll(userId: string) {
+    const active = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+    for (const row of active) {
+      await redisConnection.del(`session_valid:${row.id}`);
+    }
     await db
       .update(sessions)
       .set({ revokedAt: new Date() })

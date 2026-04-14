@@ -62,12 +62,6 @@ export class FeedService {
       return { data: [], nextCursor: null, hasMore: false };
     }
 
-    await db.execute(sql`-- EXPLAIN ANALYZE
-      -- SELECT posts.* FROM posts JOIN users ... WHERE posts.author_id = ANY(${validTargetIds})
-      -- The optimization relies strictly on posts_author_created_idx WHERE deleted_at IS NULL.
-      -- Pagination handles offset limitations seamlessly via tuple comparison.
-    `);
-
     const pQuery = db
       .select({
         id: posts.id,
@@ -249,14 +243,60 @@ export class FeedService {
       ).toString('base64');
     }
 
+    let enrichedData = dataRows as any[];
+    if (viewerId && dataRows.length > 0) {
+      const postIds = dataRows.map((r) => r.id);
+      const [liked, bookmarked, reposted] = await Promise.all([
+        db
+          .select({ postId: postLikes.postId })
+          .from(postLikes)
+          .where(
+            and(
+              eq(postLikes.userId, viewerId),
+              inArray(postLikes.postId, postIds),
+            ),
+          ),
+        db
+          .select({ postId: postBookmarks.postId })
+          .from(postBookmarks)
+          .where(
+            and(
+              eq(postBookmarks.userId, viewerId),
+              inArray(postBookmarks.postId, postIds),
+            ),
+          ),
+        db
+          .select({ postId: postReposts.postId })
+          .from(postReposts)
+          .where(
+            and(
+              eq(postReposts.userId, viewerId),
+              inArray(postReposts.postId, postIds),
+            ),
+          ),
+      ]);
+      const likedSet = new Set(liked.map((x) => x.postId));
+      const bookmarkedSet = new Set(bookmarked.map((x) => x.postId));
+      const repostedSet = new Set(reposted.map((x) => x.postId));
+
+      enrichedData = dataRows.map((r) => ({
+        ...r,
+        viewerContext: {
+          hasLiked: likedSet.has(r.id),
+          hasBookmarked: bookmarkedSet.has(r.id),
+          hasReposted: repostedSet.has(r.id),
+        },
+      }));
+    }
+
     return {
-      data: dataRows,
+      data: enrichedData,
       nextCursor,
       hasMore,
     };
   }
 
-  async getReplies(postId: string, cursor?: string) {
+  async getReplies(postId: string, cursor?: string, viewerId?: string) {
     let cursorDate: Date | null = null;
     let cursorId: string | null = null;
     if (cursor) {
@@ -312,8 +352,54 @@ export class FeedService {
       ).toString('base64');
     }
 
+    let enrichedData = dataRows as any[];
+    if (viewerId && dataRows.length > 0) {
+      const postIds = dataRows.map((r) => r.id);
+      const [liked, bookmarked, reposted] = await Promise.all([
+        db
+          .select({ postId: postLikes.postId })
+          .from(postLikes)
+          .where(
+            and(
+              eq(postLikes.userId, viewerId),
+              inArray(postLikes.postId, postIds),
+            ),
+          ),
+        db
+          .select({ postId: postBookmarks.postId })
+          .from(postBookmarks)
+          .where(
+            and(
+              eq(postBookmarks.userId, viewerId),
+              inArray(postBookmarks.postId, postIds),
+            ),
+          ),
+        db
+          .select({ postId: postReposts.postId })
+          .from(postReposts)
+          .where(
+            and(
+              eq(postReposts.userId, viewerId),
+              inArray(postReposts.postId, postIds),
+            ),
+          ),
+      ]);
+      const likedSet = new Set(liked.map((x) => x.postId));
+      const bookmarkedSet = new Set(bookmarked.map((x) => x.postId));
+      const repostedSet = new Set(reposted.map((x) => x.postId));
+
+      enrichedData = dataRows.map((r) => ({
+        ...r,
+        viewerContext: {
+          hasLiked: likedSet.has(r.id),
+          hasBookmarked: bookmarkedSet.has(r.id),
+          hasReposted: repostedSet.has(r.id),
+        },
+      }));
+    }
+
     return {
-      data: dataRows,
+      data: enrichedData,
       nextCursor,
       hasMore,
     };
@@ -321,19 +407,58 @@ export class FeedService {
 
   async getDiscoveryFeed(viewerId?: string, cursor?: number) {
     const page = cursor || 0;
-    const cacheKey = `feed:discovery:${page}`;
-    const cached = await redisConnection.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    const cacheKey = `feed:discovery:ids:${page}`; // Cache is now global for the page's IDs
+    const cachedIds = await redisConnection.get(cacheKey);
+    
+    let postIds: string[] = [];
+    if (cachedIds) {
+      postIds = JSON.parse(cachedIds);
+    } else {
+      const trending = await db
+        .select({ resourceId: trendingScores.resourceId })
+        .from(trendingScores)
+        .innerJoin(posts, eq(trendingScores.resourceId, posts.id))
+        .where(
+          and(
+            eq(trendingScores.resourceType, 'post'),
+            isNull(posts.parentId),
+            isNull(posts.deletedAt),
+            eq(posts.moderationStatus, 'visible'),
+          ),
+        )
+        .orderBy(desc(trendingScores.score))
+        .limit(100);
 
-    const trending = await db
-      .select()
-      .from(trendingScores)
-      .where(eq(trendingScores.resourceType, 'post'))
-      .orderBy(desc(trendingScores.score))
-      .limit(100);
+      postIds = trending.map((t) => t.resourceId);
 
-    const postIds = trending.map((t) => t.resourceId);
+      if (postIds.length === 0) {
+        const recent = await db
+          .select({ id: posts.id })
+          .from(posts)
+          .where(
+            and(
+              isNull(posts.deletedAt),
+              eq(posts.moderationStatus, 'visible'),
+              isNull(posts.parentId),
+            ),
+          )
+          .orderBy(desc(posts.createdAt))
+          .limit(100);
+        postIds = recent.map((r) => r.id);
+      }
+      
+      if (postIds.length > 0) {
+        await redisConnection.setex(cacheKey, 30, JSON.stringify(postIds)); // Shorter cache for IDs
+      }
+    }
+
     if (postIds.length === 0)
+      return { data: [], nextCursor: null, hasMore: false };
+
+    const start = page * 20;
+    const pageIds = postIds.slice(start, start + 20);
+    
+    if (pageIds.length === 0)
       return { data: [], nextCursor: null, hasMore: false };
 
     const pQuery = db
@@ -355,14 +480,22 @@ export class FeedService {
       .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
       .where(
         and(
-          inArray(posts.id, postIds),
+          inArray(posts.id, pageIds),
           isNull(posts.deletedAt),
           eq(posts.moderationStatus, 'visible'),
           ne(users.moderationStatus, 'shadowbanned'),
+          isNull(posts.parentId),
         ),
       );
 
     let rows = await pQuery;
+
+    // Maintain original order from postIds
+    rows.sort((a, b) => pageIds.indexOf(a.id) - pageIds.indexOf(b.id));
+
+    let likedIds = new Set<string>();
+    let bookmarkedIds = new Set<string>();
+    let repostedIds = new Set<string>();
 
     if (viewerId) {
       const blockList = await db
@@ -376,35 +509,56 @@ export class FeedService {
         blockList.flatMap((b) => [b.blockerId, b.blockedId]),
       );
 
-      const liked = await db
-        .select({ postId: postLikes.postId })
-        .from(postLikes)
-        .where(
-          and(
-            eq(postLikes.userId, viewerId),
-            inArray(postLikes.postId, postIds),
+      const [liked, bookmarked, reposted] = await Promise.all([
+        db
+          .select({ postId: postLikes.postId })
+          .from(postLikes)
+          .where(
+            and(
+              eq(postLikes.userId, viewerId),
+              inArray(postLikes.postId, pageIds),
+            ),
           ),
-        );
-      const likedIds = new Set(liked.map((l) => l.postId));
+        db
+          .select({ postId: postBookmarks.postId })
+          .from(postBookmarks)
+          .where(
+            and(
+              eq(postBookmarks.userId, viewerId),
+              inArray(postBookmarks.postId, pageIds),
+            ),
+          ),
+        db
+          .select({ postId: postReposts.postId })
+          .from(postReposts)
+          .where(
+            and(
+              eq(postReposts.userId, viewerId),
+              inArray(postReposts.postId, pageIds),
+            ),
+          ),
+      ]);
+      likedIds = new Set(liked.map((l) => l.postId));
+      bookmarkedIds = new Set(bookmarked.map((b) => b.postId));
+      repostedIds = new Set(reposted.map((r) => r.postId));
 
       rows = rows.filter((r) => !blockedIds.has(r.authorId));
     }
 
-    const sortedRows = rows.sort(
-      (a, b) => postIds.indexOf(a.id) - postIds.indexOf(b.id),
-    );
+    const enrichedData = rows.map((r) => ({
+      ...r,
+      viewerContext: viewerId ? {
+        hasLiked: likedIds.has(r.id),
+        hasBookmarked: bookmarkedIds.has(r.id),
+        hasReposted: repostedIds.has(r.id),
+      } : undefined,
+    }));
 
-    const start = page * 20;
-    const sliced = sortedRows.slice(start, start + 20);
-
-    const result = {
-      data: sliced,
-      nextCursor: start + 20 < sortedRows.length ? page + 1 : null,
-      hasMore: start + 20 < sortedRows.length,
+    return {
+      data: enrichedData,
+      nextCursor: start + 20 < postIds.length ? page + 1 : null,
+      hasMore: start + 20 < postIds.length,
     };
-
-    await redisConnection.setex(cacheKey, 60, JSON.stringify(result));
-    return result;
   }
 
   async getTrendingAppsFeed(cursor?: number) {

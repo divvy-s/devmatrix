@@ -1,6 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { db, mediaAttachments } from '@workspace/db';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { mediaQueue } from '@workspace/queue';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,6 +13,8 @@ const s3 = new S3Client({
   endpoint: process.env.AWS_ENDPOINT || undefined,
 });
 
+const bucket = process.env.S3_BUCKET || 'media-bucket';
+
 export class MediaController {
   upload = async (request: FastifyRequest, reply: FastifyReply) => {
     const data = await request.file();
@@ -16,7 +22,7 @@ export class MediaController {
       return reply.status(400).send({ error: 'No file uploaded' });
     }
 
-    const { filename, mimetype, file } = data;
+    const { filename, mimetype } = data;
 
     const validMimetypes = [
       'image/jpeg',
@@ -29,6 +35,16 @@ export class MediaController {
       return reply.status(400).send({ error: 'Invalid file type' });
     }
 
+    const buffer = await data.toBuffer();
+    if (data.file.truncated) {
+      return reply.status(413).send({ error: 'File too large' });
+    }
+
+    const sizeBytes = buffer.length;
+    if (mimetype.startsWith('image/') && sizeBytes > 10 * 1024 * 1024) {
+      return reply.status(413).send({ error: 'Image exceeds 10MB limit' });
+    }
+
     const ext = filename.split('.').pop() || '';
     const id = uuidv4();
     const userId = request.user!.userId;
@@ -37,36 +53,41 @@ export class MediaController {
     try {
       await s3.send(
         new PutObjectCommand({
-          Bucket: process.env.S3_BUCKET || 'media-bucket',
+          Bucket: bucket,
           Key: storageKey,
-          Body: file,
+          Body: buffer,
           ContentType: mimetype,
         }),
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       return reply
         .status(500)
-        .send({ error: 'Upload failed', details: err.message });
+        .send({ error: 'Upload failed', details: message });
     }
 
-    // Derive rough byte length read after stream finishes
-    const sizeBytes = (file as any).bytesRead || 1024; // fallback safe
+    const url = `https://${bucket}.s3.amazonaws.com/${storageKey}`;
 
-    if (mimetype.startsWith('image/') && sizeBytes > 10 * 1024 * 1024) {
-      return reply.status(400).send({ error: 'Image exceeds 10MB limit' });
+    try {
+      await db.insert(mediaAttachments).values({
+        id,
+        uploaderId: userId,
+        url,
+        storageKey,
+        mediaType: mimetype,
+        sizeBytes,
+        status: 'pending',
+      });
+    } catch (err) {
+      try {
+        await s3.send(
+          new DeleteObjectCommand({ Bucket: bucket, Key: storageKey }),
+        );
+      } catch {
+        /* best-effort cleanup */
+      }
+      throw err;
     }
-
-    const url = `https://${process.env.S3_BUCKET || 'media-bucket'}.s3.amazonaws.com/${storageKey}`;
-
-    await db.insert(mediaAttachments).values({
-      id,
-      uploaderId: userId,
-      url,
-      storageKey,
-      mediaType: mimetype,
-      sizeBytes,
-      status: 'pending',
-    });
 
     await mediaQueue.add('media:process', { mediaId: id });
 

@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { UnauthorizedError } from '@workspace/errors';
 import { AuthService } from './auth.service';
 
 export class AuthController {
@@ -43,18 +44,24 @@ export class AuthController {
     return reply.send(result);
   };
 
+  verifyGoogle = async (
+    request: FastifyRequest<{
+      Body: { idToken: string };
+    }>,
+    reply: FastifyReply,
+  ) => {
+    const { idToken } = request.body;
+    const result = await this.authService.verifyGoogle(idToken);
+    return reply.send(result);
+  };
+
   refresh = async (
     request: FastifyRequest<{ Body?: { refreshToken?: string } }>,
     reply: FastifyReply,
   ) => {
-    // Extract from header or body
-    let token = request.body?.refreshToken;
-    if (!token && request.headers.authorization?.startsWith('Bearer ')) {
-      token = request.headers.authorization.split(' ')[1];
-    }
-
+    const token = request.body?.refreshToken;
     if (!token) {
-      throw new Error('Refresh token required'); // Will map to 500 or validation error
+      throw new UnauthorizedError('REFRESH_TOKEN_MISSING');
     }
 
     const result = await this.authService.refresh(token);

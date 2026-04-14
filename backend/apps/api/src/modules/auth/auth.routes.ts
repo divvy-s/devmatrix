@@ -47,6 +47,18 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   server.post(
+    '/google',
+    {
+      schema: {
+        body: z.object({
+          idToken: z.string().min(1),
+        }),
+      },
+    },
+    controller.verifyGoogle as any,
+  );
+
+  server.post(
     '/refresh',
     {
       schema: {

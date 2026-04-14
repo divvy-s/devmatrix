@@ -1,6 +1,5 @@
 import { webhookQueue } from '@workspace/queue';
 import { v4 as uuidv4 } from 'uuid';
-import { and } from 'drizzle-orm';
 import {
   db,
   outboxEvents,
@@ -12,7 +11,7 @@ import {
   webhookSubscriptions,
   apps,
 } from '@workspace/db';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, and } from 'drizzle-orm';
 import { createLogger } from '@workspace/logger';
 
 const logger = createLogger('outbox-worker');
@@ -181,14 +180,25 @@ export class OutboxWorker {
     try {
       // Drizzle ORM does not natively support Postgres SKIP LOCKED dynamically easily,
       // so we use execute directly
-      const result = await db.execute(sql`
-        SELECT * FROM outbox_events 
-        WHERE status = 'pending' AND deliver_at <= NOW() 
-        ORDER BY deliver_at ASC LIMIT 50
-        FOR UPDATE SKIP LOCKED
-      `);
+      const result = await db.execute(sql.raw(`
+WITH claimed AS (
+  UPDATE outbox_events
+  SET status = 'processing'
+  WHERE id IN (
+    SELECT id FROM outbox_events
+    WHERE status = 'pending' AND deliver_at <= NOW()
+    ORDER BY deliver_at ASC
+    LIMIT 50
+    FOR UPDATE SKIP LOCKED
+  )
+  RETURNING *
+)
+SELECT * FROM claimed
+      `));
 
-      const events = result as unknown as (typeof outboxEvents.$inferSelect)[];
+      const events = (Array.isArray(result)
+        ? result
+        : (result as { rows?: unknown[] }).rows ?? []) as unknown as (typeof outboxEvents.$inferSelect)[];
 
       for (const event of events) {
         await this.processEvent(event);
@@ -201,8 +211,7 @@ export class OutboxWorker {
   }
 
   private async processEvent(event: typeof outboxEvents.$inferSelect) {
-    // Validate it's still pending just to be absolutely careful
-    if (event.status !== 'pending' || event.deliveredAt) return;
+    if (event.status !== 'processing' || event.deliveredAt) return;
 
     logger.debug({ eventId: event.id }, 'Processing outbox event');
 
@@ -211,9 +220,21 @@ export class OutboxWorker {
     };
 
     try {
+      let payload = event.payload;
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload);
+        } catch (e) {
+          logger.warn(
+            { eventId: event.id, payload },
+            'Failed to parse stringified payload',
+          );
+        }
+      }
+
       const consumer = this.consumers[event.type];
       if (consumer) {
-        await consumer(event.payload);
+        await consumer(payload);
       } else {
         logger.warn(
           { type: event.type },
@@ -244,6 +265,7 @@ export class OutboxWorker {
         await db
           .update(outboxEvents)
           .set({
+            status: 'pending',
             attempts: newAttempts,
             lastError: errorMessage,
             deliverAt: nextDeliverAt,

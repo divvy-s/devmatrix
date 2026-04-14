@@ -16,6 +16,17 @@ export async function socialRoutes(app: FastifyInstance) {
     }
   };
 
+  server.get(
+    '/search',
+    {
+      preHandler: [optionalAuth],
+      schema: {
+        querystring: z.object({ q: z.string().min(1) }),
+      },
+    },
+    controller.searchUsers as any,
+  );
+
   server.post(
     '/:username/follow',
     { preHandler: [authenticateRequest] },

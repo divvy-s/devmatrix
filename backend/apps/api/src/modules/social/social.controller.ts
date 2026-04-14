@@ -8,6 +8,14 @@ export class SocialController {
     this.socialService = new SocialService();
   }
 
+  searchUsers = async (
+    request: FastifyRequest<{ Querystring: { q: string } }>,
+    reply: FastifyReply,
+  ) => {
+    const result = await this.socialService.searchUsers(request.query.q);
+    return reply.send(result);
+  };
+
   follow = async (
     request: FastifyRequest<{ Params: { username: string } }>,
     reply: FastifyReply,

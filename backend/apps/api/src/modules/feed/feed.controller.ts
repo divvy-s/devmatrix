@@ -44,6 +44,7 @@ export class FeedController {
     const result = await this.feedService.getReplies(
       request.params.postId,
       request.query.cursor,
+      request.user?.userId,
     );
     return reply.send(result);
   };

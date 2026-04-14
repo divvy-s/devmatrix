@@ -111,6 +111,9 @@ export const buildApp = async () => {
   // Routes
   app.register(healthRoutes, { prefix: '/health' });
   app.register(authRoutes, { prefix: '/api/v1/auth' });
+  // Identity and social both mount under /api/v1/users by design: identity owns /me,
+  // /check-username, /:username (profile); social adds /:username/followers, /follow, etc.
+  // Keep new routes conflict-free (unique path + method per plugin).
   app.register(identityRoutes, { prefix: '/api/v1/users' });
   app.register(walletRoutes, { prefix: '/api/v1/wallets' });
   app.register(socialRoutes, { prefix: '/api/v1/users' });

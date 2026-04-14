@@ -25,8 +25,8 @@ export class DevelopersService {
         .limit(1);
       if (devCheck.length > 0) {
         throw new BusinessError(
-          'Developers registry already active for this user',
           'ALREADY_REGISTERED',
+          'Developers registry already active for this user',
         );
       }
 

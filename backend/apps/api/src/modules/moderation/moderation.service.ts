@@ -24,8 +24,8 @@ export class ModerationService {
   ) {
     if (data.targetType === 'user' && data.targetId === reporterId) {
       throw new BusinessError(
-        'Cannot report yourself',
         'SELF_REPORT_FORBIDDEN',
+        'You cannot report yourself.',
       );
     }
     // Check existing
@@ -42,8 +42,8 @@ export class ModerationService {
       .limit(1);
     if (existing[0]) {
       throw new BusinessError(
-        'Already reported this target',
         'DUPLICATE_REPORT',
+        'Already reported this target',
       );
     }
 

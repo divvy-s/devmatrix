@@ -61,6 +61,7 @@ export const userProfiles = pgTable('user_profiles', {
     .references(() => users.id, { onDelete: 'cascade' }),
   bio: text('bio'),
   avatarUrl: text('avatar_url'),
+  headerUrl: text('header_url'),
   websiteUrl: text('website_url'),
   location: text('location'),
   metadata: jsonb('metadata').notNull().default('{}'),
@@ -131,6 +132,7 @@ export const sessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     refreshTokenHash: text('refresh_token_hash').unique().notNull(),
+    tokenFamilyId: uuid('token_family_id').notNull(),
     deviceInfo: text('device_info'),
     ip: text('ip'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -145,6 +147,7 @@ export const sessions = pgTable(
         table.userId,
         table.revokedAt,
       ),
+      tokenFamilyIdx: index('sessions_token_family_idx').on(table.tokenFamilyId),
     };
   },
 );

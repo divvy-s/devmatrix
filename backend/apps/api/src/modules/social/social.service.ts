@@ -1,9 +1,32 @@
-import { db, users, follows, blocks, mutes, outboxEvents } from '@workspace/db';
-import { eq, and, sql, isNull, desc, or, lt } from 'drizzle-orm';
+import {
+  db,
+  users,
+  userProfiles,
+  follows,
+  blocks,
+  mutes,
+  outboxEvents,
+} from '@workspace/db';
+import { eq, and, sql, isNull, desc, or, lt, ilike } from 'drizzle-orm';
 import { BusinessError, NotFoundError } from '@workspace/errors';
 import { v4 as uuidv4 } from 'uuid';
 
 export class SocialService {
+  async searchUsers(q: string, limit = 20) {
+    const pattern = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+    const rows = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        avatarUrl: userProfiles.avatarUrl,
+      })
+      .from(users)
+      .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .where(ilike(users.username, pattern))
+      .limit(limit);
+    return rows;
+  }
+
   async fetchUserByUsername(username: string) {
     const arr = await db
       .select()
