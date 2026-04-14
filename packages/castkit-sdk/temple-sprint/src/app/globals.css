@@ -1,0 +1,437 @@
+/* ===== GOOGLE FONTS ===== */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+/* ===== TEMPLE DESIGN TOKENS ===== */
+:root {
+  --stone-bg: #0D0A05;
+  --stone-mid: #1A1208;
+  --stone-light: #2A1F0E;
+  --amber-gold: #D97706;
+  --amber-light: #F59E0B;
+  --amber-glow: rgba(217, 119, 6, 0.4);
+  --ember-orange: #C2410C;
+  --jungle-green: #166534;
+  --jungle-light: #16A34A;
+  --parchment: #FEF3C7;
+  --parchment-dim: #FDE68A;
+  --stone-text: #C4A882;
+  --stone-muted: #7A6647;
+  --crack-white: rgba(255, 220, 150, 0.9);
+
+  /* Legacy variables mapped to new palette */
+  --background: var(--stone-bg);
+  --foreground: var(--parchment);
+  --accent: var(--amber-gold);
+}
+
+@theme inline {
+  --color-background: var(--stone-bg);
+  --color-foreground: var(--parchment);
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Cinzel', serif;
+}
+
+/* ===== RESET ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  color: var(--parchment);
+  background: var(--stone-bg);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.04em;
+}
+
+button {
+  font-family: 'Cinzel', serif;
+}
+
+::selection {
+  background: var(--amber-gold);
+  color: var(--stone-bg);
+}
+
+/* ===== KEYFRAMES ===== */
+
+/* Gold pulse glow */
+@keyframes goldPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 8px rgba(217, 119, 6, 0.4),
+      0 0 20px rgba(217, 119, 6, 0.2),
+      inset 0 0 8px rgba(217, 119, 6, 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(217, 119, 6, 0.8),
+      0 0 40px rgba(217, 119, 6, 0.4),
+      inset 0 0 12px rgba(217, 119, 6, 0.1);
+  }
+}
+
+/* Float animation */
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Shimmer gradient sweep */
+@keyframes shimmerSweep {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Crack reveal clip-path */
+@keyframes crackReveal {
+  0% {
+    clip-path: polygon(
+      50% 0%, 50% 0%, 50% 0%,
+      50% 100%, 50% 100%, 50% 100%
+    );
+    opacity: 0;
+  }
+  20% {
+    clip-path: polygon(
+      20% 0%, 80% 0%, 100% 0%,
+      100% 100%, 0% 100%, 0% 0%
+    );
+    opacity: 1;
+  }
+  50% {
+    clip-path: polygon(
+      0% 0%, 100% 0%, 100% 20%,
+      85% 50%, 100% 80%, 100% 100%,
+      0% 100%, 15% 50%, 0% 20%
+    );
+  }
+  100% {
+    clip-path: polygon(
+      0% 0%, 100% 0%, 100% 100%, 0% 100%
+    );
+    opacity: 1;
+  }
+}
+
+/* Amber title flicker */
+@keyframes amberFlicker {
+  0%, 92%, 96%, 100% {
+    text-shadow:
+      0 0 10px rgba(217, 119, 6, 0.8),
+      0 0 30px rgba(217, 119, 6, 0.5),
+      0 0 60px rgba(217, 119, 6, 0.3);
+    opacity: 1;
+  }
+  93% {
+    text-shadow: 0 0 4px rgba(217, 119, 6, 0.3);
+    opacity: 0.85;
+  }
+  94% {
+    text-shadow:
+      0 0 20px rgba(217, 119, 6, 1),
+      0 0 50px rgba(217, 119, 6, 0.7);
+    opacity: 1;
+  }
+  95% {
+    text-shadow: 0 0 4px rgba(217, 119, 6, 0.3);
+    opacity: 0.9;
+  }
+}
+
+/* Runner sprint loop */
+@keyframes runnerSprint {
+  0% { transform: translateX(-120px); }
+  100% { transform: translateX(calc(100vw + 120px)); }
+}
+
+/* Runner legs animation */
+@keyframes runStep {
+  0%, 100% { transform: scaleY(1) skewX(-5deg); }
+  50% { transform: scaleY(0.85) skewX(5deg); }
+}
+
+/* Coin flip 3D */
+@keyframes coinFlip {
+  0% { transform: perspective(200px) rotateY(0deg); }
+  100% { transform: perspective(200px) rotateY(360deg); }
+}
+
+/* Score pulse milestone */
+@keyframes scorePulse {
+  0% { transform: scale(1); color: var(--parchment); }
+  50% { transform: scale(1.15); color: var(--amber-gold); text-shadow: 0 0 20px rgba(217, 119, 6, 0.8); }
+  100% { transform: scale(1); color: var(--parchment); }
+}
+
+/* Gem crack shatter */
+@keyframes gemCrack {
+  0% { transform: scale(1); filter: brightness(1); }
+  30% { transform: scale(1.2) rotate(-5deg); filter: brightness(2) sepia(1) saturate(0); }
+  60% { transform: scale(0.8) rotate(5deg); filter: brightness(0.5); opacity: 0.5; }
+  100% { transform: scale(0) rotate(15deg); filter: brightness(0); opacity: 0; }
+}
+
+/* Speed badge scale pulse */
+@keyframes speedBadge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); box-shadow: 0 0 20px rgba(194, 65, 12, 0.8); }
+}
+
+/* Star burst for high score */
+@keyframes starBurst {
+  0% { transform: scale(0) rotate(0deg); opacity: 1; }
+  60% { transform: scale(1.3) rotate(180deg); opacity: 1; }
+  100% { transform: scale(0.9) rotate(360deg); opacity: 0; }
+}
+
+/* Ember float particle */
+@keyframes emberFloat {
+  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0.8; }
+  50% { transform: translateY(-80px) translateX(20px) scale(0.7); opacity: 0.5; }
+  100% { transform: translateY(-160px) translateX(-10px) scale(0.3); opacity: 0; }
+}
+
+/* Stagger slide-in for leaderboard rows */
+@keyframes slideInRow {
+  from { transform: translateX(-30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Rank change slide up */
+@keyframes rankUp {
+  0% { transform: translateY(10px); color: var(--ember-orange); }
+  100% { transform: translateY(0); color: var(--jungle-light); }
+}
+
+/* Rainbow shimmer for legendary */
+@keyframes rainbowShimmer {
+  0% { border-color: #D97706; box-shadow: 0 0 20px rgba(217, 119, 6, 0.6); }
+  16% { border-color: #C2410C; box-shadow: 0 0 20px rgba(194, 65, 12, 0.6); }
+  33% { border-color: #7C3AED; box-shadow: 0 0 20px rgba(124, 58, 237, 0.6); }
+  50% { border-color: #0891B2; box-shadow: 0 0 20px rgba(8, 145, 178, 0.6); }
+  66% { border-color: #166534; box-shadow: 0 0 20px rgba(22, 101, 52, 0.6); }
+  83% { border-color: #B45309; box-shadow: 0 0 20px rgba(180, 83, 9, 0.6); }
+  100% { border-color: #D97706; box-shadow: 0 0 20px rgba(217, 119, 6, 0.6); }
+}
+
+/* Card flip */
+@keyframes cardFlipIn {
+  from { transform: perspective(600px) rotateY(-90deg); opacity: 0; }
+  to { transform: perspective(600px) rotateY(0deg); opacity: 1; }
+}
+
+/* Parchment texture pulse */
+@keyframes parchmentPulse {
+  0%, 100% { opacity: 0.04; }
+  50% { opacity: 0.08; }
+}
+
+/* Loading sweep */
+@keyframes loadingSweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Distance tick */
+@keyframes distanceTick {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to { transform: scaleY(1); transform-origin: bottom; }
+}
+
+/* Rumble on button click */
+@keyframes rumble {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-2px, 1px); }
+  40% { transform: translate(2px, -1px); }
+  60% { transform: translate(-1px, 2px); }
+  80% { transform: translate(1px, -2px); }
+}
+
+/* Glow green pulse */
+@keyframes greenPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(22, 101, 52, 0.5), 0 0 20px rgba(22, 163, 74, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(22, 163, 74, 0.8), 0 0 40px rgba(22, 163, 74, 0.4);
+  }
+}
+
+/* Temple door hover */
+@keyframes doorOpen {
+  0% { letter-spacing: 0.04em; }
+  100% { letter-spacing: 0.15em; }
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Amber glow pulse */
+.glow-gold {
+  animation: goldPulse 2.5s ease-in-out infinite;
+}
+
+/* Gentle float */
+.float-anim {
+  animation: floatUp 3.5s ease-in-out infinite;
+}
+
+/* Shimmer overlay for locked states */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(217, 119, 6, 0.15) 30%,
+    rgba(255, 220, 100, 0.35) 50%,
+    rgba(217, 119, 6, 0.15) 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerSweep 2s linear infinite;
+}
+
+/* Crack reveal transition */
+.crack-reveal {
+  animation: crackReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Temple CTA button */
+.temple-btn {
+  font-family: 'Cinzel', serif;
+  border: 2px solid var(--amber-gold);
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.15), rgba(194, 65, 12, 0.1));
+  color: var(--parchment);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.temple-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.3), transparent);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.temple-btn:hover {
+  border-color: var(--amber-light);
+  color: var(--amber-light);
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 20px rgba(217, 119, 6, 0.5),
+    0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.temple-btn:hover::before {
+  opacity: 1;
+}
+
+.temple-btn:active {
+  animation: rumble 0.15s ease;
+  transform: translateY(0);
+}
+
+/* HUD panel */
+.hud-panel {
+  background: rgba(13, 10, 5, 0.75);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(217, 119, 6, 0.1), inset 0 1px 0 rgba(255, 220, 100, 0.1);
+}
+
+/* Legendary rainbow border */
+.legendary-border {
+  animation: rainbowShimmer 3s linear infinite;
+  border-width: 2px;
+  border-style: solid;
+}
+
+/* Score count-up animate */
+.score-counted {
+  animation: scorePulse 0.4s ease-out;
+}
+
+/* Rank up indicator */
+.rank-up {
+  animation: rankUp 0.5s ease-out forwards;
+}
+
+/* Parchment background texture */
+.parchment-bg {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(217, 119, 6, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(194, 65, 12, 0.06) 0%, transparent 50%),
+    linear-gradient(135deg, #0D0A05 0%, #1A1208 50%, #0D0A05 100%);
+}
+
+/* Stone texture overlay */
+.stone-texture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 3px),
+    repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(255,255,255,0.005) 4px, rgba(255,255,255,0.005) 5px);
+  pointer-events: none;
+  animation: parchmentPulse 4s ease-in-out infinite;
+}
+
+/* Ember particle */
+.ember {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #F59E0B, #C2410C);
+  animation: emberFloat linear infinite;
+  pointer-events: none;
+}
+
+/* Spinning coin */
+.coin-spin {
+  display: inline-block;
+  animation: coinFlip 1.5s linear infinite;
+  transform-style: preserve-3d;
+}
+
+/* Temple door retry hover */
+.door-btn:hover {
+  animation: doorOpen 0.3s ease forwards;
+}
+
+/* Green glow for equip/reward */
+.glow-green {
+  animation: greenPulse 2s ease-in-out infinite;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--stone-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--amber-gold);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--amber-light);
+}
