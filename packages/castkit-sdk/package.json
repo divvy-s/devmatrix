@@ -1,31 +1,28 @@
 {
-  "name": "@castkit/sdk",
-  "version": "1.0.0",
-  "description": "Official CastKit SDK for mini-app development and deployment verification.",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    }
-  },
-  "bin": {
-    "castkit-verify": "./dist/cli.js"
-  },
+  "name": "test-website",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "build": "tsc --project tsconfig.json",
-    "verify": "node dist/cli.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
-  "files": [
-    "dist"
-  ],
-  "engines": {
-    "node": ">=18.0.0"
+  "dependencies": {
+    "lucide-react": "^1.8.0",
+    "next": "16.2.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "viem": "^2.47.12"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
