@@ -1,0 +1,25 @@
+{
+  "name": "core-sdk",
+  "version": "1.0.0",
+  "description": "SDK Core architecture for Next.js App Router",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./react": "./src/react/index.js",
+    "./modules/*": "./src/modules/*"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0-rc"
+  },
+  "devDependencies": {
+    "react": "^18.2.0"
+  },
+  "dependencies": {
+    "lucide-react": "^1.8.0",
+    "viem": "^2.47.12"
+  }
+}
