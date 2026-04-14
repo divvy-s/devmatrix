@@ -47,19 +47,7 @@
 
 **DevMatrix (CastKit)** is a full-stack Web3 social platform that enables developers to build, deploy, and monetize **mini-apps** — interactive, sandboxed components embedded directly inside social feeds. Users can mint NFTs, tip creators, vote on DAOs, and interact with smart contracts without ever leaving the timeline.
 
-### Key Features
 
-| Feature | Description |
-|---|---|
-| 🎮 **Mini-App Engine** | Sandboxed iframe execution with secure `postMessage` gateways |
-| 🔗 **Web3 Native** | Wallet-first architecture with viem/wagmi integration |
-| 🤖 **AI Recommendations** | LightGBM-powered feed ranking and app recommendations |
-| 📦 **CastKit SDK** | Plug-and-play TypeScript SDK with CLI verification tooling |
-| 🛡️ **Admin & Moderation** | Role-based access control, content moderation, audit logging |
-| 🔔 **Real-time Notifications** | Event-driven notification system with configurable preferences |
-| 📊 **Analytics** | Background workers for engagement tracking and webhook delivery |
-
----
 
 ## 🏗 Architecture
 
@@ -398,10 +386,8 @@ graph LR
 
 - **Wallet Authentication** — Sign-in with Ethereum (SIWE) via wallet signature verification
 - **Multi-chain Support** — Manage multiple wallet addresses across chains (Ethereum, Base, Polygon)
-- **On-chain Tipping** — Tip authors in USDC/ETH directly from the feed (`tipAuthor.ts`)
-- **NFT Minting** — Inline mini-app NFT drops executed from social posts
-- **DAO Voting** — Embedded governance proposals with on-chain vote recording
-- **Permission Scopes** — Granular app permissions (read profile, post on behalf, spend tokens)
+- **On-chain Tipping** — Tip authors in BASE/ETH directly from the feed (`tipAuthor.ts`)
+- **NFT Minting** — Inline mini-app NFT game 
 
 ### Dependencies
 
@@ -469,10 +455,7 @@ The frontend uses a custom dark-mode-first design system with neon accents:
 | **Drizzle ORM** | 0.30.10 | Type-safe SQL & migrations |
 | **PostgreSQL** | 16 (Alpine) | Primary database |
 | **Redis** | 7 (Alpine) | Caching & job queues |
-| **BullMQ** | 5.73.4 | Background job processing |
 | **Zod** | 3.23.8 | Request/response validation |
-| **Sharp** | 0.34.5 | Image processing |
-| **AWS S3 SDK** | 3.x | Object storage |
 | **pnpm workspaces** | — | Monorepo package management |
 
 ### API Modules
